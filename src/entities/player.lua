@@ -1,7 +1,7 @@
 local anim8 = require "lib.anim8"
 
-local constants = require "src.constants"
-local isPressed = require "src.input"
+local constants = require "src.constants.constants"
+local isPressed = require "src.core.input"
 
 local Player = {}
 Player.__index = Player

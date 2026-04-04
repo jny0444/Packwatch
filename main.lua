@@ -1,8 +1,8 @@
 _G.love = require "love"
-local constants = require "src.constants"
-local createFonts = require "src.fonts"
-local Player = require "src.player"
-local Grid = require "src.grid"
+local constants = require "src.constants.constants"
+local createFonts = require "src.ui.fonts"
+local Player = require "src.entities.player"
+local Grid = require "src.world.grid"
 
 local fonts = {}
 local player = nil

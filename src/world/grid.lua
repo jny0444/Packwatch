@@ -1,4 +1,4 @@
-local constants = require "src.constants"
+local constants = require "src.constants.constants"
 
 local Grid = {}
 Grid.__index = Grid
