@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::components::Player;
@@ -14,10 +15,9 @@ impl Plugin for PlayerPlugin {
 
 fn player_move(
     keyboard: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    mut player_query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
 ) {
-    let Ok(mut transform) = player_query.single_mut() else {
+    let Ok((transform, mut velocity)) = player_query.single_mut() else {
         return;
     };
 
@@ -40,7 +40,7 @@ fn player_move(
         direction -= right;
     }
 
-    if direction != Vec3::ZERO {
-        transform.translation += direction.normalize() * MOVE_SPEED * time.delta_secs();
-    }
+    let direction = direction.normalize_or_zero() * MOVE_SPEED;
+    velocity.x = direction.x;
+    velocity.z = direction.z;
 }
