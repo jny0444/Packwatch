@@ -1,9 +1,6 @@
 use bevy::ecs::component::Component;
 
 #[derive(Component)]
-pub struct Player;
-
-#[derive(Component)]
 pub struct CameraController {
     pub pitch: f32,
     pub yaw: f32,

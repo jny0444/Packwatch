@@ -1,7 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::components::{CameraController, Player};
+use crate::camera::CameraController;
+use crate::player::Player;
 
 pub fn setup(
     mut commands: Commands,

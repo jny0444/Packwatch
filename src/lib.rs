@@ -1,4 +1,17 @@
 pub mod camera;
-pub mod components;
-pub mod scene;
 pub mod player;
+pub mod scene;
+
+use bevy::prelude::*;
+
+use camera::CameraPlugin;
+use player::PlayerPlugin;
+use scene::ScenePlugin;
+
+pub struct PackwatchPlugin;
+
+impl Plugin for PackwatchPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((ScenePlugin, CameraPlugin, PlayerPlugin));
+    }
+}
