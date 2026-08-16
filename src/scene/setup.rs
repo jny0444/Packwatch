@@ -2,7 +2,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::camera::CameraController;
-use crate::interactions::components::Interactable;
+use crate::interactions::components::{InspectInfo, Interactable};
 use crate::player::Player;
 
 pub fn setup(
@@ -31,9 +31,12 @@ pub fn setup(
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
         Transform::from_xyz(0.0, 0.5, -3.0),
-        RigidBody::Dynamic,
+        RigidBody::Static,
         Collider::cuboid(1.0, 1.0, 1.0),
         Interactable,
+        InspectInfo {
+            title: "Test Cube".into(),
+        },
     ));
 
     // Spawns the player

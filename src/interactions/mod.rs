@@ -1,11 +1,17 @@
 pub mod components;
 pub mod focus;
+pub mod page;
+pub mod prompt;
 pub mod use_item;
 
 use bevy::prelude::*;
 
 use crate::interactions::{
-    components::FocusedInteractable, focus::update_focus, use_item::use_item,
+    components::{FocusedInteractable, OpenInspection},
+    focus::update_focus,
+    page::{close_page, spawn_page},
+    prompt::{spawn_prompt, update_prompt},
+    use_item::use_item,
 };
 
 pub struct InteractionPlugin;
@@ -13,6 +19,11 @@ pub struct InteractionPlugin;
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FocusedInteractable>()
-            .add_systems(Update, (update_focus, use_item));
+            .init_resource::<OpenInspection>()
+            .add_systems(Startup, (spawn_prompt, spawn_page))
+            .add_systems(
+                Update,
+                (update_focus, update_prompt, use_item, close_page).chain(),
+            );
     }
 }

@@ -1,14 +1,24 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
+use crate::interactions::components::OpenInspection;
 use crate::player::Player;
 
 const MOVE_SPEED: f32 = 4.0;
 
 pub fn player_move(
+    open: Res<OpenInspection>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
 ) {
+    if open.0.is_some() {
+        if let Ok((_, mut velocity)) = player_query.single_mut() {
+            velocity.x = 0.0;
+            velocity.z = 0.0;
+        }
+        return;
+    }
+
     let Ok((transform, mut velocity)) = player_query.single_mut() else {
         return;
     };
