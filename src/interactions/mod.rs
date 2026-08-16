@@ -6,12 +6,15 @@ pub mod use_item;
 
 use bevy::prelude::*;
 
-use crate::interactions::{
-    components::{FocusedInteractable, OpenInspection},
-    focus::update_focus,
-    page::{close_page, spawn_page},
-    prompt::{spawn_prompt, update_prompt},
-    use_item::use_item,
+use crate::{
+    interactions::{
+        components::{FocusedInteractable, OpenInspection},
+        focus::update_focus,
+        page::{close_page, spawn_page},
+        prompt::{spawn_prompt, update_prompt},
+        use_item::use_item,
+    },
+    screens::GameState,
 };
 
 pub struct InteractionPlugin;
@@ -23,7 +26,9 @@ impl Plugin for InteractionPlugin {
             .add_systems(Startup, (spawn_prompt, spawn_page))
             .add_systems(
                 Update,
-                (update_focus, update_prompt, use_item, close_page).chain(),
+                (update_focus, update_prompt, use_item, close_page)
+                    .chain()
+                    .run_if(in_state(GameState::Playing)),
             );
     }
 }

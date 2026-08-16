@@ -2,21 +2,16 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 
 use crate::camera::CameraController;
 use crate::interactions::components::OpenInspection;
-use crate::player::Player;
 
 pub fn player_look(
     open: Res<OpenInspection>,
     mut mouse_motion: MessageReader<MouseMotion>,
-    mut player_query: Query<&mut Transform, With<Player>>,
-    mut camera_query: Query<(&mut Transform, &mut CameraController), Without<Player>>,
+    mut camera_query: Query<(&mut Transform, &mut CameraController)>,
 ) {
     if open.0.is_some() {
         return;
     }
 
-    let Ok(mut player_transform) = player_query.single_mut() else {
-        return;
-    };
     let Ok((mut camera_transform, mut controller)) = camera_query.single_mut() else {
         return;
     };
@@ -27,6 +22,6 @@ pub fn player_look(
         controller.pitch = controller.pitch.clamp(-1.54, 1.54);
     }
 
-    player_transform.rotation = Quat::from_rotation_y(controller.yaw);
-    camera_transform.rotation = Quat::from_rotation_x(controller.pitch);
+    camera_transform.rotation =
+        Quat::from_rotation_y(controller.yaw) * Quat::from_rotation_x(controller.pitch);
 }

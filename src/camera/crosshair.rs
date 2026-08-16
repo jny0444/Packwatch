@@ -1,7 +1,13 @@
 use bevy::prelude::*;
 
+use crate::interactions::components::OpenInspection;
+
+#[derive(Component)]
+pub struct Crosshair;
+
 pub fn spawn_crosshair(mut commands: Commands) {
     commands.spawn((
+        Crosshair,
         Node {
             width: percent(100),
             height: percent(100),
@@ -30,4 +36,19 @@ pub fn spawn_crosshair(mut commands: Commands) {
             )
         ],
     ));
+}
+
+pub fn update_crosshair(
+    open: Res<OpenInspection>,
+    mut crosshair: Query<&mut Visibility, With<Crosshair>>,
+) {
+    let Ok(mut visibility) = crosshair.single_mut() else {
+        return;
+    };
+
+    *visibility = if open.0.is_none() {
+        Visibility::Visible
+    } else {
+        Visibility::Hidden
+    };
 }

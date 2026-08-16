@@ -267,7 +267,7 @@ Every frame, from the **camera’s world position**, go **forward** up to `INTER
 
 | Thing | Marker | Behavior |
 | --- | --- | --- |
-| Crosshair | (none) | Always there, screen center |
+| Crosshair | `Crosshair` | Screen center. Hidden while the inspect page is open |
 | “E to interact” | `InteractPrompt` | Visible only if focused **and** page closed |
 | Inspect panel | `InspectionPage` | Hidden until E |
 | Title text | `InspectionTitle` | Filled from `InspectInfo.title` |
