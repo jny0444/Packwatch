@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod interactions;
+pub mod items;
 pub mod npc;
 pub mod player;
 pub mod scene;
