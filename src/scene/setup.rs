@@ -4,9 +4,9 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::camera::CameraController;
-use crate::interactions::components::{InspectInfo, Interactable};
 use crate::npc::spawn::spawn_npc;
 use crate::player::Player;
+use crate::templates::{SceneModelTemplate, spawn_scene_model};
 
 pub fn walls(
     commands: &mut Commands,
@@ -50,6 +50,7 @@ pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Generates a plane
     commands.spawn((
@@ -68,19 +69,13 @@ pub fn setup(
         Transform::from_xyz(1.0, 2.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    // Spawns the cube for testing
-    // REMOVE LATER
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
-        Transform::from_xyz(0.0, 0.5, -3.0),
-        RigidBody::Static,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        Interactable,
-        InspectInfo {
-            title: "Test Cube".into(),
-        },
-    ));
+    spawn_scene_model(
+        &mut commands,
+        &asset_server,
+        SceneModelTemplate::gltf("Test Character", "char.gltf", Vec3::new(0.0, 0.0, -3.0))
+            .with_scale(Vec3::ONE)
+            .with_collider_size(Vec3::ONE),
+    );
 
     spawn_npc(
         &mut commands,

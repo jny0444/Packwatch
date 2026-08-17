@@ -1,9 +1,8 @@
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    interactions::components::{InspectInfo, Interactable},
-    npc::{Npc, npc_kind::NpcKind},
+    npc::npc_kind::NpcKind,
+    templates::{spawn_character, CharacterTemplate},
 };
 
 pub fn spawn_npc(
@@ -13,19 +12,10 @@ pub fn spawn_npc(
     kind: NpcKind,
     position: Vec3,
 ) {
-    let stats = kind.stats();
-    commands.spawn((
-        Npc,
-        kind,
-        stats,
-        Transform::from_translation(position),
-        Mesh3d(meshes.add(Capsule3d::new(0.4, 0.9))),
-        MeshMaterial3d(materials.add(Color::srgb(0.6, 0.6, 0.7))),
-        RigidBody::Static,
-        Collider::capsule(0.4, 0.9),
-        Interactable,
-        InspectInfo {
-            title: kind.stats().name,
-        },
-    ));
+    spawn_character(
+        commands,
+        meshes,
+        materials,
+        CharacterTemplate::new(kind, position),
+    );
 }

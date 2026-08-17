@@ -4,6 +4,7 @@ pub mod npc;
 pub mod player;
 pub mod scene;
 pub mod screens;
+pub mod templates;
 
 use bevy::prelude::*;
 
