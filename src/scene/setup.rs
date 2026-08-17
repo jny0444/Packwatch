@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use crate::camera::CameraController;
 use crate::interactions::components::{InspectInfo, Interactable};
+use crate::npc::spawn::spawn_npc;
 use crate::player::Player;
 
 pub fn walls(
@@ -80,6 +81,14 @@ pub fn setup(
             title: "Test Cube".into(),
         },
     ));
+
+    spawn_npc(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        crate::npc::npc_kind::NpcKind::Guide,
+        Vec3::new(2.0, 0.85, -2.0),
+    );
 
     // Spawns the player
     commands.spawn((
