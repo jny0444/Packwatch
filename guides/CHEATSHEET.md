@@ -49,8 +49,12 @@ src/
   lib.rs               PackwatchPlugin (your game plugins)
   camera/              look, mouse lock, crosshair
   player/              WASD
-  scene/               spawn floor, light, cube, player
+  scene/               spawn floor, light, models, NPCs, player
   interactions/        look-at, prompt, inspect page
+  npc/                 NPC kinds and stats
+  items/               item definitions (not wired up yet)
+  templates/           spawn helpers for characters and models
+  screens/             loading, start, Playing state
 ```
 
 **Rule:** new feature = new folder (or a new file in an existing folder). Camera code does not go in `player/`. UI for inspect does not go in `scene/`.
@@ -90,12 +94,13 @@ A bundle of systems (and sometimes resources) for one feature. You have:
 
 When you add a feature, add it as a plugin on `PackwatchPlugin`.
 
-### `Startup` vs `Update`
+### `OnEnter` vs `Update`
 
 | Schedule | When | Examples |
 | --- | --- | --- |
-| `Startup` | Once, when the game starts | Spawn floor, player, crosshair, hidden inspect page |
-| `Update` | Every frame | Look, move, raycast, E, Esc |
+| `OnEnter(Playing)` | Once, when the match starts | Spawn floor, player, crosshair, hidden inspect page |
+| `Update` | Every frame while Playing | Look, move input, raycast, E, Esc |
+| `FixedUpdate` | Physics tick while Playing | Apply WASD to velocity |
 
 ### `.chain()`
 
@@ -200,7 +205,7 @@ Not attached to one entity.
 
 `Res<T>` = read. `ResMut<T>` = write. `init_resource::<T>()` creates it at startup (`Default`).
 
-`open.0` is the value inside the tuple struct. `None` = closed / not looking. `Some(entity)` = that entity.
+`open.is_open()` / `open.entity()` read the inspection resource. `None` = closed. `Some(entity)` = that entity.
 
 While the page is open, look / move / focus **return early**. Two modes:
 

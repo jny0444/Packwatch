@@ -18,11 +18,11 @@ pub fn update_focus(
     parents: Query<&ChildOf>,
     mut focused: ResMut<FocusedInteractable>,
 ) {
-    if open.0.is_some() {
+    if open.is_open() {
         return;
     }
 
-    focused.0 = None;
+    focused.set(None);
 
     let Ok(camera) = camera_query.single() else {
         return;
@@ -31,23 +31,18 @@ pub fn update_focus(
         return;
     };
 
-    let transform = camera.compute_transform();
+    let origin = camera.translation();
     let filter = SpatialQueryFilter::from_excluded_entities([player]);
 
-    let Some(hit) = spatial_query.cast_ray(
-        transform.translation,
-        transform.forward(),
-        INTERACT_RANGE,
-        true,
-        &filter,
-    ) else {
+    let Some(hit) = spatial_query.cast_ray(origin, camera.forward(), INTERACT_RANGE, true, &filter)
+    else {
         return;
     };
 
     let mut entity = hit.entity;
     loop {
         if interactables.contains(entity) {
-            focused.0 = Some(entity);
+            focused.set(Some(entity));
             return;
         }
         let Ok(child_of) = parents.get(entity) else {

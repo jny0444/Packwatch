@@ -3,47 +3,59 @@ use std::f32::consts::FRAC_PI_2;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::camera::CameraController;
-use crate::npc::spawn::spawn_npc;
-use crate::player::Player;
-use crate::templates::{SceneModelTemplate, spawn_scene_model};
+use crate::npc::NpcKind;
+use crate::player::spawn_player;
+use crate::screens::GameState;
+use crate::templates::{CharacterTemplate, SceneModelTemplate, spawn_character, spawn_scene_model};
 
-pub fn walls(
+const ROOM_COLOR: Color = Color::srgb(0.3, 0.5, 0.3);
+const FLOOR_COLLIDER_THICKNESS: f32 = 0.1;
+
+fn walls(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
+    wall_material: &MeshMaterial3d<StandardMaterial>,
 ) {
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(10.0, 5.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
-        Transform::from_xyz(0.0, 2.5, -5.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-        RigidBody::Static,
-        Collider::cuboid(10.0, 0.1, 5.0),
-    ));
+    let plane_10x5 = Mesh3d(meshes.add(Plane3d::default().mesh().size(10.0, 5.0)));
+    let plane_5x10 = Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 10.0)));
 
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(10.0, 5.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
-        Transform::from_xyz(0.0, 2.5, 5.0).with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-        RigidBody::Static,
-        Collider::cuboid(10.0, 0.1, 5.0),
-    ));
+    let walls = [
+        (
+            Vec3::new(0.0, 2.5, -5.0),
+            Quat::from_rotation_x(FRAC_PI_2),
+            plane_10x5.clone(),
+            Vec3::new(10.0, 0.1, 5.0),
+        ),
+        (
+            Vec3::new(0.0, 2.5, 5.0),
+            Quat::from_rotation_x(-FRAC_PI_2),
+            plane_10x5,
+            Vec3::new(10.0, 0.1, 5.0),
+        ),
+        (
+            Vec3::new(5.0, 2.5, 0.0),
+            Quat::from_rotation_z(FRAC_PI_2),
+            plane_5x10.clone(),
+            Vec3::new(5.0, 0.1, 10.0),
+        ),
+        (
+            Vec3::new(-5.0, 2.5, 0.0),
+            Quat::from_rotation_z(-FRAC_PI_2),
+            plane_5x10,
+            Vec3::new(5.0, 0.1, 10.0),
+        ),
+    ];
 
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 10.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
-        Transform::from_xyz(5.0, 2.5, 0.0).with_rotation(Quat::from_rotation_z(FRAC_PI_2)),
-        RigidBody::Static,
-        Collider::cuboid(5.0, 0.1, 10.0),
-    ));
-
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 10.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
-        Transform::from_xyz(-5.0, 2.5, 0.0).with_rotation(Quat::from_rotation_z(-FRAC_PI_2)),
-        RigidBody::Static,
-        Collider::cuboid(5.0, 0.1, 10.0),
-    ));
+    for (translation, rotation, mesh, collider) in walls {
+        commands.spawn((
+            DespawnOnExit(GameState::Playing),
+            mesh,
+            wall_material.clone(),
+            Transform::from_translation(translation).with_rotation(rotation),
+            RigidBody::Static,
+            Collider::cuboid(collider.x, collider.y, collider.z),
+        ));
+    }
 }
 
 pub fn setup(
@@ -52,18 +64,21 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    // Generates a plane
+    let room_material = MeshMaterial3d(materials.add(ROOM_COLOR));
+
     commands.spawn((
+        DespawnOnExit(GameState::Playing),
         Mesh3d(meshes.add(Plane3d::default().mesh().size(10.0, 10.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
+        room_material.clone(),
         Transform::from_xyz(0.0, 0.0, 0.0),
         RigidBody::Static,
-        Collider::cuboid(10.0, 0.1, 10.0),
+        Collider::cuboid(10.0, FLOOR_COLLIDER_THICKNESS, 10.0),
     ));
 
-    walls(&mut commands, &mut meshes, &mut materials);
+    walls(&mut commands, &mut meshes, &room_material);
 
     commands.spawn((
+        DespawnOnExit(GameState::Playing),
         DirectionalLight {
             illuminance: 12_000.0,
             shadow_maps_enabled: true,
@@ -75,32 +90,15 @@ pub fn setup(
     spawn_scene_model(
         &mut commands,
         &asset_server,
-        SceneModelTemplate::gltf("Test Character", "char.gltf", Vec3::new(0.0, 0.0, -3.0))
-            .with_scale(Vec3::ONE),
+        SceneModelTemplate::gltf("Test Character", "char.gltf", Vec3::new(0.0, 0.0, -3.0)),
     );
 
-    spawn_npc(
+    spawn_character(
         &mut commands,
         &mut meshes,
         &mut materials,
-        crate::npc::npc_kind::NpcKind::Guide,
-        Vec3::new(2.0, 0.85, -2.0),
+        CharacterTemplate::new(NpcKind::Guide, Vec3::new(2.0, 0.85, -2.0)),
     );
 
-    // Spawns the player
-    commands.spawn((
-        Player,
-        Transform::from_xyz(0.0, 0.85, 0.0),
-        RigidBody::Dynamic,
-        Collider::capsule(0.4, 0.9),
-        LockedAxes::ROTATION_LOCKED,
-        LinearVelocity::default(),
-        Friction::ZERO.with_combine_rule(CoefficientCombine::Multiply),
-        TranslationInterpolation,
-        children![(
-            Camera3d::default(),
-            CameraController::default(),
-            Transform::from_xyz(0.0, 0.85, 0.0),
-        )],
-    ));
+    spawn_player(&mut commands, Vec3::new(0.0, 0.85, 0.0));
 }

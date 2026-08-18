@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
 use crate::interactions::components::{FocusedInteractable, InteractPrompt, OpenInspection};
+use crate::screens::GameState;
 
 pub fn spawn_prompt(mut commands: Commands) {
     commands.spawn((
         InteractPrompt,
+        DespawnOnExit(GameState::Playing),
         Node {
             position_type: PositionType::Absolute,
             width: percent(100),
@@ -33,7 +35,7 @@ pub fn update_prompt(
         return;
     };
 
-    *visibility = if open.0.is_none() && focused.0.is_some() {
+    *visibility = if !open.is_open() && focused.entity().is_some() {
         Visibility::Visible
     } else {
         Visibility::Hidden

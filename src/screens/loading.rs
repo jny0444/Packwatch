@@ -34,10 +34,8 @@ impl GameAssets {
 
 /// Queue every asset that must finish before the start screen.
 /// Add new `assets.track(asset_server.load(...))` lines here.
-fn queue_assets(_asset_server: &AssetServer, _assets: &mut GameAssets) {
-    // let _room = _assets.track(
-    //     _asset_server.load(GltfAssetLabel::Scene(0).from_asset("levels/room.glb")),
-    // );
+fn queue_assets(asset_server: &AssetServer, assets: &mut GameAssets) {
+    assets.track(asset_server.load::<WorldAsset>(GltfAssetLabel::Scene(0).from_asset("char.gltf")));
 }
 
 fn spawn_loading(mut commands: Commands, asset_server: Res<AssetServer>) {

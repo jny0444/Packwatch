@@ -3,7 +3,8 @@ use bevy::prelude::*;
 
 use crate::{
     interactions::components::{InspectInfo, Interactable},
-    npc::{npc_kind::NpcKind, Npc},
+    npc::{Npc, NpcKind},
+    screens::GameState,
 };
 
 #[derive(Clone)]
@@ -52,9 +53,9 @@ pub fn spawn_character(
     template: CharacterTemplate,
 ) {
     let stats = template.kind.stats();
-    let title = stats.name.clone();
     let mut character = commands.spawn((
         Npc,
+        DespawnOnExit(GameState::Playing),
         template.kind,
         stats,
         Transform::from_translation(template.position),
@@ -65,6 +66,11 @@ pub fn spawn_character(
     ));
 
     if template.interactable {
-        character.insert((Interactable, InspectInfo { title }));
+        character.insert((
+            Interactable,
+            InspectInfo {
+                title: template.kind.display_name().into(),
+            },
+        ));
     }
 }

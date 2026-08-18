@@ -7,32 +7,23 @@ use crate::player::Player;
 
 const MOVE_SPEED: f32 = 4.0;
 
-pub fn player_move(
-    open: Res<OpenInspection>,
+#[derive(Resource, Default)]
+pub(crate) struct MoveWish(Vec3);
+
+pub fn read_move_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     camera_query: Query<&CameraController>,
-    mut player_query: Query<&mut LinearVelocity, With<Player>>,
+    mut wish: ResMut<MoveWish>,
 ) {
-    if open.0.is_some() {
-        if let Ok(mut velocity) = player_query.single_mut() {
-            velocity.x = 0.0;
-            velocity.z = 0.0;
-        }
-        return;
-    }
+    wish.0 = Vec3::ZERO;
 
     let Ok(controller) = camera_query.single() else {
         return;
     };
-    let Ok(mut velocity) = player_query.single_mut() else {
-        return;
-    };
 
     let rotation = Quat::from_rotation_y(controller.yaw);
-    let forward = rotation * Vec3::NEG_Z;
-    let right = rotation * Vec3::X;
-    let forward = Vec3::new(forward.x, 0.0, forward.z).normalize_or_zero();
-    let right = Vec3::new(right.x, 0.0, right.z).normalize_or_zero();
+    let forward = (rotation * Vec3::NEG_Z).normalize_or_zero();
+    let right = (rotation * Vec3::X).normalize_or_zero();
 
     let mut direction = Vec3::ZERO;
     if keyboard.pressed(KeyCode::KeyW) {
@@ -48,7 +39,25 @@ pub fn player_move(
         direction -= right;
     }
 
-    let direction = direction.normalize_or_zero() * MOVE_SPEED;
+    wish.0 = direction.normalize_or_zero();
+}
+
+pub fn player_move(
+    open: Res<OpenInspection>,
+    wish: Res<MoveWish>,
+    mut player_query: Query<&mut LinearVelocity, With<Player>>,
+) {
+    let Ok(mut velocity) = player_query.single_mut() else {
+        return;
+    };
+
+    if open.is_open() {
+        velocity.x = 0.0;
+        velocity.z = 0.0;
+        return;
+    }
+
+    let direction = wish.0 * MOVE_SPEED;
     velocity.x = direction.x;
     velocity.z = direction.z;
 }

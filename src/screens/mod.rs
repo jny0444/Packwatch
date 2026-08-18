@@ -16,12 +16,32 @@ pub enum GameState {
     Playing,
 }
 
+#[derive(Component)]
+struct MenuCamera;
+
 pub struct ScreensPlugin;
 
 impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.02, 0.03)))
+            .add_systems(OnEnter(GameState::Loading), spawn_menu_camera)
+            .add_systems(OnEnter(GameState::Start), spawn_menu_camera)
+            .add_systems(OnExit(GameState::Start), despawn_menu_camera)
             .add_plugins((LoadingPlugin, StartPlugin));
+    }
+}
+
+fn spawn_menu_camera(mut commands: Commands, existing: Query<(), With<MenuCamera>>) {
+    if !existing.is_empty() {
+        return;
+    }
+
+    commands.spawn((Camera2d, MenuCamera));
+}
+
+fn despawn_menu_camera(mut commands: Commands, cameras: Query<Entity, With<MenuCamera>>) {
+    for entity in &cameras {
+        commands.entity(entity).despawn();
     }
 }

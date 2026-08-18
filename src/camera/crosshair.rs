@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::interactions::components::OpenInspection;
+use crate::screens::GameState;
 
 #[derive(Component)]
 pub struct Crosshair;
@@ -8,6 +9,7 @@ pub struct Crosshair;
 pub fn spawn_crosshair(mut commands: Commands) {
     commands.spawn((
         Crosshair,
+        DespawnOnExit(GameState::Playing),
         Node {
             width: percent(100),
             height: percent(100),
@@ -46,9 +48,9 @@ pub fn update_crosshair(
         return;
     };
 
-    *visibility = if open.0.is_none() {
-        Visibility::Visible
-    } else {
+    *visibility = if open.is_open() {
         Visibility::Hidden
+    } else {
+        Visibility::Visible
     };
 }

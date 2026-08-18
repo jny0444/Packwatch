@@ -16,7 +16,7 @@ pub enum NpcKind {
 }
 ```
 
-2. Add its stats in `NpcKind::stats()`:
+2. Add a `display_name()` arm and stats in `NpcKind`. Every kind needs its own arm — do not use `_ =>`.
 
 ```rust
 NpcKind::NewCharacter => NpcStats {
@@ -35,7 +35,7 @@ NpcKind::NewCharacter => NpcStats {
 3. Spawn it in `src/scene/setup.rs`:
 
 ```rust
-use crate::npc::npc_kind::NpcKind;
+use crate::npc::NpcKind;
 use crate::templates::{CharacterTemplate, spawn_character};
 
 spawn_character(
@@ -99,8 +99,7 @@ spawn_scene_model(
         "models/supply_box.glb",
         Vec3::new(1.5, 0.0, -2.5),
     )
-    .with_scale(Vec3::splat(1.0))
-    .with_collider_size(Vec3::new(0.8, 1.0, 0.8)),
+    .with_scale(Vec3::splat(1.0)),
 );
 ```
 

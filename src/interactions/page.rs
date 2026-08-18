@@ -1,10 +1,13 @@
 use bevy::{prelude::*, window::CursorOptions};
 
+use crate::camera::set_cursor_locked;
 use crate::interactions::components::{InspectionPage, InspectionTitle, OpenInspection};
+use crate::screens::GameState;
 
 pub fn spawn_page(mut commands: Commands) {
     commands.spawn((
         InspectionPage,
+        DespawnOnExit(GameState::Playing),
         Node {
             width: percent(100),
             height: percent(100),
@@ -39,19 +42,18 @@ pub fn close_page(
     mut page: Query<&mut Visibility, With<InspectionPage>>,
     mut cursor_options: Single<&mut CursorOptions>,
 ) {
-    if open.0.is_none() {
+    if !open.is_open() {
         return;
     }
     if !keyboard.just_pressed(KeyCode::Escape) {
         return;
     }
 
-    open.0 = None;
+    open.close();
 
     if let Ok(mut visibility) = page.single_mut() {
         *visibility = Visibility::Hidden;
     }
 
-    cursor_options.grab_mode = bevy::window::CursorGrabMode::Locked;
-    cursor_options.visible = false;
+    set_cursor_locked(&mut cursor_options, true);
 }

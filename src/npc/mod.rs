@@ -1,6 +1,8 @@
 pub mod npc_kind;
 pub mod npc_stats;
-pub mod spawn;
+
+pub use npc_kind::NpcKind;
+pub use npc_stats::NpcStats;
 
 use bevy::ecs::component::Component;
 

@@ -1,21 +1,25 @@
 mod components;
 mod movement;
+mod spawn;
 
 pub use components::Player;
+pub use spawn::spawn_player;
 
 use bevy::prelude::*;
 
 use crate::screens::GameState;
 
-use movement::player_move;
+use movement::{MoveWish, player_move, read_move_input};
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            FixedUpdate,
-            player_move.run_if(in_state(GameState::Playing)),
-        );
+        app.init_resource::<MoveWish>()
+            .add_systems(Update, read_move_input.run_if(in_state(GameState::Playing)))
+            .add_systems(
+                FixedUpdate,
+                player_move.run_if(in_state(GameState::Playing)),
+            );
     }
 }

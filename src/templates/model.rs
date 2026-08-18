@@ -2,6 +2,11 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::interactions::components::{InspectInfo, Interactable};
+use crate::screens::GameState;
+
+/// Marker for imported scenes whose materials should drop unused PNG alpha.
+#[derive(Component)]
+pub struct FixGltfAlpha;
 
 #[derive(Clone)]
 pub struct ModelTemplate {
@@ -42,7 +47,6 @@ pub struct SceneModelTemplate {
     pub position: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
-    pub collider_size: Vec3,
     pub interactable: bool,
 }
 
@@ -55,7 +59,6 @@ impl SceneModelTemplate {
             position,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
-            collider_size: Vec3::ONE,
             interactable: true,
         }
     }
@@ -75,11 +78,6 @@ impl SceneModelTemplate {
         self
     }
 
-    pub fn with_collider_size(mut self, collider_size: Vec3) -> Self {
-        self.collider_size = collider_size;
-        self
-    }
-
     pub fn not_interactable(mut self) -> Self {
         self.interactable = false;
         self
@@ -93,6 +91,7 @@ pub fn spawn_model(
     template: ModelTemplate,
 ) {
     let mut model = commands.spawn((
+        DespawnOnExit(GameState::Playing),
         Mesh3d(meshes.add(Cuboid::new(
             template.size.x,
             template.size.y,
@@ -120,6 +119,8 @@ pub fn spawn_scene_model(
     template: SceneModelTemplate,
 ) {
     let mut model = commands.spawn((
+        DespawnOnExit(GameState::Playing),
+        FixGltfAlpha,
         WorldAssetRoot(
             asset_server
                 .load(GltfAssetLabel::Scene(template.scene_index).from_asset(template.asset_path)),

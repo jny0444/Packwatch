@@ -1,5 +1,5 @@
-pub mod item_kind;
 pub mod item_def;
+pub mod item_kind;
 pub mod pocket;
 pub mod types;
 

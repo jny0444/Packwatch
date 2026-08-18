@@ -51,7 +51,8 @@ fn start_game(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if mouse_button.just_pressed(MouseButton::Left) || keyboard.get_just_pressed().next().is_some() {
+    if mouse_button.just_pressed(MouseButton::Left) || keyboard.get_just_pressed().next().is_some()
+    {
         next_state.set(GameState::Playing);
     }
 }

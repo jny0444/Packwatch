@@ -23,7 +23,7 @@ impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FocusedInteractable>()
             .init_resource::<OpenInspection>()
-            .add_systems(Startup, (spawn_prompt, spawn_page))
+            .add_systems(OnEnter(GameState::Playing), (spawn_prompt, spawn_page))
             .add_systems(
                 Update,
                 (update_focus, update_prompt, use_item, close_page)

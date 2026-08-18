@@ -1,10 +1,22 @@
-use bevy::{prelude::*, window::CursorOptions};
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, CursorOptions},
+};
 
 use crate::interactions::components::OpenInspection;
 
+pub fn set_cursor_locked(cursor: &mut CursorOptions, locked: bool) {
+    if locked {
+        cursor.grab_mode = CursorGrabMode::Locked;
+        cursor.visible = false;
+    } else {
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
+    }
+}
+
 pub fn lock_cursor(mut cursor_options: Single<&mut CursorOptions>) {
-    cursor_options.grab_mode = bevy::window::CursorGrabMode::Locked;
-    cursor_options.visible = false;
+    set_cursor_locked(&mut cursor_options, true);
 }
 
 pub fn grab_cursor(
@@ -13,17 +25,15 @@ pub fn grab_cursor(
     mouse_button: Res<ButtonInput<MouseButton>>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
-    if open.0.is_some() {
+    if open.is_open() {
         return;
     }
 
     if mouse_button.just_pressed(MouseButton::Left) {
-        cursor_options.grab_mode = bevy::window::CursorGrabMode::Locked;
-        cursor_options.visible = false;
+        set_cursor_locked(&mut cursor_options, true);
     }
 
     if keyboard.just_pressed(KeyCode::Escape) {
-        cursor_options.grab_mode = bevy::window::CursorGrabMode::None;
-        cursor_options.visible = true;
+        set_cursor_locked(&mut cursor_options, false);
     }
 }

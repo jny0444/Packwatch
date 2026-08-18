@@ -4,6 +4,7 @@ mod cursor;
 mod look;
 
 pub use controller::CameraController;
+pub use cursor::set_cursor_locked;
 
 use bevy::prelude::*;
 

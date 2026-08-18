@@ -1,4 +1,3 @@
-use crate::items::Pocket;
 use crate::items::item_def::ItemDef;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -42,14 +41,6 @@ impl CigTypes {
             CigTypes::CamelConnect => ("Camel Connect", "Short pack smoke.", 11.0),
         };
 
-        ItemDef {
-            name,
-            description,
-            pocket: Pocket::Items,
-            max_stack: 999,
-            tossable: true,
-            needs_lighter: true,
-            dizziness_delta,
-        }
+        ItemDef::item(name, description, dizziness_delta, true)
     }
 }

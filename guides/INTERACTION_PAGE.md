@@ -15,7 +15,7 @@ Do **not** rewrite look, walk, or the E/Esc loop unless something is broken. Add
 | Page open | No look, no WASD, no “E to interact”, no crosshair |
 | Page closed | Crosshair back. FPS mode |
 
-You spawn the page **once** at startup (`spawn_page`). E only flips `Visibility` and fills the title. Do not spawn a new page every time.
+You spawn the page **once** when the game enters Playing (`spawn_page`). E only flips `Visibility` and fills the title. Do not spawn a new page every time.
 
 ---
 

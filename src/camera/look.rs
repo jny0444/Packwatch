@@ -1,14 +1,18 @@
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::{input::mouse::MouseMotion, prelude::*};
 
 use crate::camera::CameraController;
 use crate::interactions::components::OpenInspection;
+
+const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.03;
 
 pub fn player_look(
     open: Res<OpenInspection>,
     mut mouse_motion: MessageReader<MouseMotion>,
     mut camera_query: Query<(&mut Transform, &mut CameraController)>,
 ) {
-    if open.0.is_some() {
+    if open.is_open() {
         return;
     }
 
@@ -19,7 +23,7 @@ pub fn player_look(
     for event in mouse_motion.read() {
         controller.yaw -= event.delta.x * controller.sensitivity;
         controller.pitch -= event.delta.y * controller.sensitivity;
-        controller.pitch = controller.pitch.clamp(-1.54, 1.54);
+        controller.pitch = controller.pitch.clamp(-PITCH_LIMIT, PITCH_LIMIT);
     }
 
     camera_transform.rotation =

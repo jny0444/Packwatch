@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::CursorOptions};
 
+use crate::camera::set_cursor_locked;
 use crate::interactions::components::{
     FocusedInteractable, InspectInfo, InspectionPage, InspectionTitle, OpenInspection,
 };
@@ -13,7 +14,7 @@ pub fn use_item(
     mut title: Query<&mut Text, With<InspectionTitle>>,
     mut cursor_options: Single<&mut CursorOptions>,
 ) {
-    if open.0.is_some() {
+    if open.is_open() {
         return;
     }
 
@@ -21,7 +22,7 @@ pub fn use_item(
         return;
     }
 
-    let Some(entity) = focused.0 else {
+    let Some(entity) = focused.entity() else {
         return;
     };
 
@@ -29,7 +30,7 @@ pub fn use_item(
         return;
     };
 
-    open.0 = Some(entity);
+    open.open(entity);
 
     if let Ok(mut visibility) = page.single_mut() {
         *visibility = Visibility::Visible;
@@ -38,6 +39,5 @@ pub fn use_item(
         **text = info.title.clone();
     }
 
-    cursor_options.grab_mode = bevy::window::CursorGrabMode::None;
-    cursor_options.visible = true;
+    set_cursor_locked(&mut cursor_options, false);
 }
