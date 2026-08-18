@@ -63,18 +63,20 @@ pub fn setup(
 
     walls(&mut commands, &mut meshes, &mut materials);
 
-    // Generates the light source
     commands.spawn((
-        DirectionalLight::default(),
-        Transform::from_xyz(1.0, 2.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
+        DirectionalLight {
+            illuminance: 12_000.0,
+            shadow_maps_enabled: true,
+            ..default()
+        },
+        Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     spawn_scene_model(
         &mut commands,
         &asset_server,
         SceneModelTemplate::gltf("Test Character", "char.gltf", Vec3::new(0.0, 0.0, -3.0))
-            .with_scale(Vec3::ONE)
-            .with_collider_size(Vec3::ONE),
+            .with_scale(Vec3::ONE),
     );
 
     spawn_npc(

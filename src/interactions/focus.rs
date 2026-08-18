@@ -15,6 +15,7 @@ pub fn update_focus(
     camera_query: Query<&GlobalTransform, With<CameraController>>,
     player_query: Query<Entity, With<Player>>,
     interactables: Query<(), With<Interactable>>,
+    parents: Query<&ChildOf>,
     mut focused: ResMut<FocusedInteractable>,
 ) {
     if open.0.is_some() {
@@ -43,7 +44,15 @@ pub fn update_focus(
         return;
     };
 
-    if interactables.contains(hit.entity) {
-        focused.0 = Some(hit.entity);
+    let mut entity = hit.entity;
+    loop {
+        if interactables.contains(entity) {
+            focused.0 = Some(entity);
+            return;
+        }
+        let Ok(child_of) = parents.get(entity) else {
+            return;
+        };
+        entity = child_of.parent();
     }
 }

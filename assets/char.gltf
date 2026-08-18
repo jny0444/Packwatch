@@ -104,8 +104,9 @@
   ],
   "materials": [
     {
-      "alphaMode": "BLEND",
-      "doubleSided": true,
+      "alphaMode": "MASK",
+      "alphaCutoff": 0.5,
+      "doubleSided": false,
       "extensions": {
         "KHR_materials_unlit": {}
       },

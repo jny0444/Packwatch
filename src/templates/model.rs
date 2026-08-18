@@ -130,11 +130,7 @@ pub fn spawn_scene_model(
             scale: template.scale,
         },
         RigidBody::Static,
-        Collider::cuboid(
-            template.collider_size.x,
-            template.collider_size.y,
-            template.collider_size.z,
-        ),
+        ColliderConstructorHierarchy::new(ColliderConstructor::ConvexHullFromMesh),
     ));
 
     if template.interactable {
