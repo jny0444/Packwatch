@@ -14,7 +14,7 @@ use crate::{
         prompt::{spawn_prompt, update_prompt},
         use_item::use_item,
     },
-    screens::GameState,
+    screens::{GameState, PlayMode},
 };
 
 pub struct InteractionPlugin;
@@ -28,7 +28,7 @@ impl Plugin for InteractionPlugin {
                 Update,
                 (update_focus, update_prompt, use_item, close_page)
                     .chain()
-                    .run_if(in_state(GameState::Playing)),
+                    .run_if(in_state(PlayMode::Exploring)),
             );
     }
 }

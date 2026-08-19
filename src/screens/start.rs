@@ -4,10 +4,16 @@ use crate::screens::GameState;
 
 pub struct StartPlugin;
 
+#[derive(Component)]
+struct StartHint;
+
 impl Plugin for StartPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Start), spawn_start)
-            .add_systems(Update, start_game.run_if(in_state(GameState::Start)));
+            .add_systems(
+                Update,
+                (start_game, pulse_start_hint).run_if(in_state(GameState::Start)),
+            );
     }
 }
 
@@ -35,6 +41,7 @@ fn spawn_start(mut commands: Commands) {
                 TextColor(Color::WHITE),
             ),
             (
+                StartHint,
                 Text::new("Click to start"),
                 TextFont {
                     font_size: FontSize::Px(20.0),
@@ -54,5 +61,13 @@ fn start_game(
     if mouse_button.just_pressed(MouseButton::Left) || keyboard.get_just_pressed().next().is_some()
     {
         next_state.set(GameState::Playing);
+    }
+}
+
+fn pulse_start_hint(time: Res<Time>, mut hints: Query<&mut TextColor, With<StartHint>>) {
+    let t = (time.elapsed_secs() * 2.4).sin() * 0.5 + 0.5;
+    let lightness = 0.2 + 0.82 * t;
+    for mut color in &mut hints {
+        *color = TextColor(Color::srgb(lightness, lightness, lightness + 0.03));
     }
 }

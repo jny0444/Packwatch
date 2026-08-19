@@ -73,7 +73,7 @@ Models are interactable by default. If it should only be decoration, add `.not_i
 
 ## Add an imported `.glb` / `.gltf` model
 
-Put the model file under `assets/`, for example `assets/models/supply_box.glb`.
+Put the model under `assets/models/` (characters in `assets/models/characters/<name>/`, rooms in `assets/scenes/`). Example: `assets/models/supply_box.glb`.
 
 Add `asset_server` to the `setup` system parameters in `src/scene/setup.rs`:
 

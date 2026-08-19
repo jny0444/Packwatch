@@ -8,7 +8,7 @@ pub use cursor::set_cursor_locked;
 
 use bevy::prelude::*;
 
-use crate::screens::GameState;
+use crate::screens::{GameState, PlayMode};
 
 use crosshair::{spawn_crosshair, update_crosshair};
 use cursor::{grab_cursor, lock_cursor};
@@ -21,7 +21,7 @@ impl Plugin for CameraPlugin {
         app.add_systems(OnEnter(GameState::Playing), (spawn_crosshair, lock_cursor))
             .add_systems(
                 Update,
-                (player_look, grab_cursor, update_crosshair).run_if(in_state(GameState::Playing)),
+                (player_look, grab_cursor, update_crosshair).run_if(in_state(PlayMode::Exploring)),
             );
     }
 }

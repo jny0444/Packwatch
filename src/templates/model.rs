@@ -2,6 +2,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::interactions::components::{InspectInfo, Interactable};
+use crate::npc::{Npc, NpcKind};
 use crate::screens::GameState;
 
 /// Marker for imported scenes whose materials should drop unused PNG alpha.
@@ -48,6 +49,8 @@ pub struct SceneModelTemplate {
     pub rotation: Quat,
     pub scale: Vec3,
     pub interactable: bool,
+    pub collider: ColliderConstructor,
+    pub npc: Option<NpcKind>,
 }
 
 impl SceneModelTemplate {
@@ -60,6 +63,8 @@ impl SceneModelTemplate {
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             interactable: true,
+            collider: ColliderConstructor::ConvexHullFromMesh,
+            npc: None,
         }
     }
 
@@ -80,6 +85,17 @@ impl SceneModelTemplate {
 
     pub fn not_interactable(mut self) -> Self {
         self.interactable = false;
+        self
+    }
+
+    pub fn with_trimesh_collider(mut self) -> Self {
+        self.collider = ColliderConstructor::TrimeshFromMesh;
+        self
+    }
+
+    pub fn as_npc(mut self, kind: NpcKind) -> Self {
+        self.title = kind.display_name().into();
+        self.npc = Some(kind);
         self
     }
 }
@@ -131,8 +147,12 @@ pub fn spawn_scene_model(
             scale: template.scale,
         },
         RigidBody::Static,
-        ColliderConstructorHierarchy::new(ColliderConstructor::ConvexHullFromMesh),
+        ColliderConstructorHierarchy::new(template.collider),
     ));
+
+    if let Some(kind) = template.npc {
+        model.insert((Npc, kind, kind.stats()));
+    }
 
     if template.interactable {
         model.insert((

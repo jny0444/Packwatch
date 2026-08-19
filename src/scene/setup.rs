@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use crate::npc::NpcKind;
 use crate::player::spawn_player;
 use crate::screens::GameState;
-use crate::templates::{CharacterTemplate, SceneModelTemplate, spawn_character, spawn_scene_model};
+use crate::templates::{SceneModelTemplate, spawn_scene_model};
 
 const ROOM_COLOR: Color = Color::srgb(0.3, 0.5, 0.3);
 const FLOOR_COLLIDER_THICKNESS: f32 = 0.1;
@@ -90,14 +90,23 @@ pub fn setup(
     spawn_scene_model(
         &mut commands,
         &asset_server,
-        SceneModelTemplate::gltf("Test Character", "char.gltf", Vec3::new(0.0, 0.0, -3.0)),
+        SceneModelTemplate::gltf(
+            "Test Character",
+            "models/characters/nechaev/nechaev.gltf",
+            Vec3::new(0.0, 0.0, -3.0),
+        ),
     );
 
-    spawn_character(
+    spawn_scene_model(
         &mut commands,
-        &mut meshes,
-        &mut materials,
-        CharacterTemplate::new(NpcKind::Guide, Vec3::new(2.0, 0.85, -2.0)),
+        &asset_server,
+        SceneModelTemplate::gltf(
+            "Guide",
+            "models/characters/guide/guide.glb",
+            Vec3::new(2.0, 0.0, -2.0),
+        )
+        .with_scale(Vec3::splat(0.55))
+        .as_npc(NpcKind::Guide),
     );
 
     spawn_player(&mut commands, Vec3::new(0.0, 0.85, 0.0));
