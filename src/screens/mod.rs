@@ -21,6 +21,7 @@ pub enum GameState {
 pub enum PlayMode {
     #[default]
     Exploring,
+    Dialogue,
     Match,
 }
 

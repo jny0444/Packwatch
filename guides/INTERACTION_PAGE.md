@@ -1,161 +1,356 @@
-# Working on the interaction page
+# Interaction page — ECS working guide
 
-This is the overlay that opens when you look at something and press **E**. Right now it is a dark panel with a title. You will grow it into notes, clues, item descriptions, and later inventory.
+The overlay that opens when you look at something and press **E**. World objects own **data**. The page owns **layout**. Systems copy data into the page on E and hide it on Esc.
 
-Do **not** rewrite look, walk, or the E/Esc loop unless something is broken. Add content **on top**.
-
----
-
-## 1. What already works
-
-| Action | Result |
-| --- | --- |
-| Look at the cube + **E** | Page opens. Title = `InspectInfo.title` |
-| **Esc** | Page closes. Mouse locks. You can walk again |
-| Page open | No look, no WASD, no “E to interact”, no crosshair |
-| Page closed | Crosshair back. FPS mode |
-
-You spawn the page **once** when the game enters Playing (`spawn_page`). E only flips `Visibility` and fills the title. Do not spawn a new page every time.
+Do not rewrite look, walk, or the E/Esc loop. Add widgets and fields on top.
 
 ---
 
-## 2. Files (keep camera/player out)
+## 1. Files
 
-| File | Job |
-| --- | --- |
-| `src/interactions/page.rs` | Layout: panel, title, future body/buttons |
-| `src/interactions/use_item.rs` | **E**: open page, copy data from the object into the UI |
-| `src/interactions/components.rs` | `InspectInfo` (data on the object) + markers (`InspectionPage`, `InspectionTitle`) |
-| `src/scene/setup.rs` | Put `Interactable` + `InspectInfo` on things in the world |
-| `src/interactions/focus.rs` | Raycast: “am I looking at it?” (leave this) |
-| `src/interactions/prompt.rs` | “E to interact” (leave this) |
+| File | Job | Touch? |
+| --- | --- | --- |
+| `src/interactions/components.rs` | Data + markers + resources | Yes, when you add a field or widget |
+| `src/interactions/page.rs` | Spawn layout; Esc close | Yes, when you add UI |
+| `src/interactions/use_item.rs` | **E**: copy object data into the page | Yes, when the page needs new data |
+| `src/interactions/mod.rs` | Register systems | Yes, when you add a **new** system |
+| `src/interactions/focus.rs` | Raycast “what am I looking at?” | No |
+| `src/interactions/prompt.rs` | “E to interact” hint | No |
+| `src/templates/model.rs` | Puts `InspectInfo` on spawned models/NPCs | Only if new spawn fields |
+| `src/camera/` `src/player/` | Freeze while page is open | No |
 
-**Rule:** world objects own **data**. The page owns **how it looks**. `use_item` copies data into the page when you press E.
+**Rule:** page layout stays in `page.rs`. Input that **opens** the page stays in `use_item.rs`. Input that **closes** stays in `close_page`.
 
 ---
 
-## 3. The tree you spawn
+## 2. The two worlds
 
 ```
-InspectionPage          full screen, centered, Hidden until E
- └── panel              dark box, 360px wide, padding
-      └── InspectionTitle    text, filled on E
+3D entity (Guide, box, …)
+  Interactable          marker — raycast can see it
+  InspectInfo { title } data — what the page should show
+  maybe Npc, NpcKind    extra data you can also Query
+
+UI entity (spawned once)
+  InspectionPage        full-screen overlay, starts Hidden
+    └── panel
+          └── InspectionTitle   Text filled on E
 ```
 
-Add new widgets as **siblings of the title**, inside the panel: body text, a photo, a Close hint, later buttons.
+One page. Many objects. E does not spawn a new overlay. It shows the existing one and writes that object’s `InspectInfo` into the title (and later body, portrait, …).
 
-Give each widget a **marker component** (like `InspectionTitle`) so `use_item` can find it with a `Query`.
+`OpenInspection` is the switch:
 
----
-
-## 4. Suggested order of work
-
-Do these in order. Each step is a small, playable change.
-
-### Step A — Body text (do this first)
-
-1. Add a field on `InspectInfo`, e.g. `body: String`.
-2. Add a marker `InspectionBody` and a second `Text` child under the panel (smaller font, gray).
-3. In `setup.rs`, set the cube’s body: a sentence about the cube.
-4. In `use_item`, copy `info.body` into that text the same way you copy the title.
-
-Check: E on the cube shows title **and** a paragraph. Esc still closes.
-
-### Step B — Layout that can grow
-
-The panel is a single column. When you add the body:
-
-- On the **panel** `Node`, set `flex_direction: FlexDirection::Column` and `row_gap: px(12)` so title sits above body.
-- Give the body a smaller `font_size` than the title.
-- If the paragraph is long, set `max_width` on the panel (you already have `width: px(360)`).
-
-This is UI, not 3D. Same tools as the start screen: `Node`, `Text`, `BackgroundColor`.
-
-### Step C — Different objects, different pages
-
-Copy the cube spawn. Change mesh, position, **and** `InspectInfo`. One page UI; many objects. E fills the same title/body from whichever entity is in `OpenInspection`.
-
-You do **not** need one page prefab per item.
-
-### Step D — Close hint / extra chrome
-
-Add a third text: `"Esc to close"`. It does not need `InspectInfo`; it is always the same. Spawn it in `spawn_page` only.
-
-### Step E — Later (not yet)
-
-- Image / portrait: `ImageNode` + a path in `InspectInfo` (`Handle<Image>` from `AssetServer`)
-- Clickable **Close** button: `Button` child; on click do the same as Esc in `close_page`
-- Inventory: E would *take* the item. That is a new resource, not more title text
-- Animations: pulse/fade on the panel is the same idea as start-screen text, only `run_if` when `OpenInspection` is `Some`
+- `None` — exploring (look, WASD, E work)
+- `Some(entity)` — that object’s page is open (look/move/prompt freeze)
 
 ---
 
-## 5. How open/close actually works
+## 3. How a Bevy system is a function
 
-`OpenInspection` is the switch.
+A system is a function. Each **parameter** is something you ask the world for. Bevy fills them every frame. You never call other systems; you only declare what you need.
 
-- `None` — exploring
-- `Some(entity)` — this object’s page is open
+```rust
+fn my_system(
+    // resources — one global value
+    time: Res<Time>,
+    mut open: ResMut<OpenInspection>,
 
-`use_item.rs` (E):
+    // queries — all entities that match
+    mut titles: Query<&mut Text, With<InspectionTitle>>,
+    infos: Query<&InspectInfo>,
 
-1. Require focus + a closed page.
-2. Set `OpenInspection` to that entity.
-3. Show `InspectionPage`.
-4. Copy `InspectInfo` into UI texts.
-5. Free the mouse (`CursorGrabMode::None`).
+    // input
+    keyboard: Res<ButtonInput<KeyCode>>,
+) { ... }
+```
 
-`close_page.rs` (Esc):
-
-1. Set `OpenInspection` to `None`.
-2. Hide the page.
-3. Lock the mouse again.
-
-Look, move, focus, prompt, and crosshair all key off `OpenInspection`. If you add a new FPS system, return early when the page is open.
+Then register it on the plugin (see §7). If it is not in `InteractionPlugin`, it never runs.
 
 ---
 
-## 6. Patterns to copy
+## 4. System params you will actually use
 
-**New field on every inspectable**
+Copy these. Do not invent new ways to find the same entities.
+
+### Resources (`Res` / `ResMut`)
+
+One of them in the whole app. Not attached to an entity.
+
+| Param | Meaning |
+| --- | --- |
+| `focused: Res<FocusedInteractable>` | Who the camera is looking at (`Option<Entity>`) |
+| `mut open: ResMut<OpenInspection>` | Whether a page is open, and for whom |
+| `keyboard: Res<ButtonInput<KeyCode>>` | Keys this frame |
+| `time: Res<Time>` | `elapsed_secs()`, `delta_secs()` for pulses |
+
+`Res` = read. `ResMut` = write. Use `ResMut` only when you `open()` / `close()`.
+
+### Queries
+
+`Query<&T, With<Marker>>` = “every entity that has both `T` and `Marker`.”
+
+| Param | Meaning |
+| --- | --- |
+| `inspect_info: Query<&InspectInfo>` | Data on the **3D object**. Use `.get(entity)` |
+| `mut title: Query<&mut Text, With<InspectionTitle>>` | The title widget. Use `.single_mut()` — there is one |
+| `mut page: Query<&mut Visibility, With<InspectionPage>>` | Show/hide the overlay |
+| `npcs: Query<&NpcKind>` | Extra data on the same 3D entity, if you need it |
+
+**`.get(entity)`** — “this one object I already know.” Used for the focused Guide.
+
+**`.single_mut()`** — “there is exactly one of these in the world.” Used for page widgets you spawned once.
+
+**`.iter_mut()`** — many entities. You almost never need this on the page (one overlay).
+
+### `Single<T>`
+
+Same as `Query<T>` that must have exactly one match:
+
+```rust
+mut cursor_options: Single<&mut CursorOptions>,
+```
+
+That is already how mouse lock is done. Fine for “the window cursor.” Prefer `Query` + `With<Marker>` for page widgets so a missing widget is a quiet `Err`, not a panic.
+
+### `Commands`
+
+Only when you **create or destroy** entities (`spawn_page`). Opening/closing the page does **not** use `Commands` — it toggles `Visibility` and `OpenInspection`.
+
+### What you do **not** take
+
+- `AssetServer` in `use_item` unless you are loading an image **at press time** (prefer a `Handle<Image>` already on `InspectInfo`)
+- `Camera` / `Player` — focus already did that
+- `NextState<PlayMode>` — inspect is not a match. Stay in `Exploring`
+
+---
+
+## 5. The systems that already exist (read these as templates)
+
+Registered in `src/interactions/mod.rs`, **chained**, only while `PlayMode::Exploring`:
 
 ```text
-InspectInfo { title, body }
-        ↓  use_item on E
-InspectionTitle / InspectionBody  (Text on the page)
+update_focus → update_prompt → use_item → close_page
 ```
 
-**New UI that is the same for every item** (footer, dim backdrop)
+Order matters: focus must run before E, or you open last frame’s target.
 
-- Spawn it in `spawn_page`
-- No `InspectInfo` field
+### `use_item` — open (this is the one you extend)
 
-**Marker + query** (same as title):
-
-```text
-Query<&mut Text, With<InspectionBody>>
+```rust
+pub fn use_item(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    focused: Res<FocusedInteractable>,
+    inspect_info: Query<&InspectInfo>,
+    mut open: ResMut<OpenInspection>,
+    mut page: Query<&mut Visibility, With<InspectionPage>>,
+    mut title: Query<&mut Text, With<InspectionTitle>>,
+    mut cursor_options: Single<&mut CursorOptions>,
+)
 ```
 
-Fill it in `use_item`. Empty it in `close_page` only if leftover text would flash next time you open.
+Pattern:
+
+1. Early-out if the page is already open, or E was not just pressed, or nothing is focused.
+2. `inspect_info.get(entity)` — if that entity has no `InspectInfo`, do nothing (a door can be `Interactable` without a page).
+3. `open.open(entity)`.
+4. Show the page, copy fields into widgets, unlock the cursor.
+
+Every new line of inspect data is: **new query param** + **copy in this function**.
+
+### `close_page` — Esc
+
+```rust
+pub fn close_page(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut open: ResMut<OpenInspection>,
+    mut page: Query<&mut Visibility, With<InspectionPage>>,
+    mut cursor_options: Single<&mut CursorOptions>,
+)
+```
+
+No `InspectInfo`. Closing does not care which object it was. Hide + `open.close()` + lock mouse.
+
+### `spawn_page` — once
+
+```rust
+pub fn spawn_page(mut commands: Commands)
+```
+
+`OnEnter(GameState::Playing)`. Builds the widget tree. Starts `Visibility::Hidden`. Uses `DespawnOnExit(GameState::Playing)` so it dies with the level.
 
 ---
 
-## 7. Do not
+## 6. Recipe: add body text (the pattern for everything else)
 
-- Spawn a new `InspectionPage` on every E (you will stack overlays).
-- Put page layout in `scene/setup.rs` or `player/`.
-- Drive look/WASD from the page. Freeze them via `OpenInspection` only.
-- Make the floor `Interactable` unless you want E on the ground.
-- Fight the mouse: while the page is open the OS cursor should stay **visible** so you can click UI later.
+This is the full ECS loop for “the page shows one more thing.”
+
+### 6a. Data on the object — `components.rs`
+
+```rust
+pub struct InspectInfo {
+    pub title: String,
+    pub body: String,   // new
+}
+```
+
+Every spawn that inserts `InspectInfo` must set `body` too (`templates/model.rs`, and `templates/character.rs` if you use capsules again).
+
+### 6b. Marker on the widget — `components.rs`
+
+```rust
+#[derive(Component)]
+pub struct InspectionBody;
+```
+
+Empty struct. It exists so the query can say `With<InspectionBody>` instead of guessing among several `Text`s.
+
+### 6c. Spawn the widget — `page.rs`
+
+Sibling of `InspectionTitle`, inside the panel. Panel `Node` should be a column:
+
+```rust
+Node {
+    flex_direction: FlexDirection::Column,
+    row_gap: px(12),
+    width: px(360),
+    padding: UiRect::all(px(24)),
+    ..default()
+}
+```
+
+Child:
+
+```rust
+(
+    InspectionBody,
+    Text::new(""),
+    TextFont { font_size: FontSize::Px(16.0), ..default() },
+    TextColor(Color::srgb(0.7, 0.7, 0.72)),
+)
+```
+
+### 6d. Copy on E — `use_item.rs`
+
+Add a param:
+
+```rust
+mut body: Query<&mut Text, With<InspectionBody>>,
+```
+
+After you copy the title:
+
+```rust
+if let Ok(mut text) = body.single_mut() {
+    **text = info.body.clone();
+}
+```
+
+`**text` because `Text` derefs to `String`.
+
+### 6e. Do you need `mod.rs`?
+
+No. `use_item` is already registered. You only edit `mod.rs` when you add a **new function** (e.g. a Close button click system).
 
 ---
 
-## 8. Checklist when something “does nothing”
+## 7. Registering a new system
 
-- Did you add `Interactable` **and** `InspectInfo` on the object?
-- Does the collider exist? The ray hits colliders, not the mesh picture.
-- Is `OpenInspection` still `Some` from last time? Esc first.
-- New text: did you add the marker **and** fill it in `use_item`?
-- Plugin still registers `spawn_page`, `use_item`, `close_page` in `interactions/mod.rs`.
+`src/interactions/mod.rs`:
 
-When you want a body paragraph, image slot, or close button, start with **Step A**.
+```rust
+.add_systems(
+    Update,
+    (update_focus, update_prompt, use_item, close_page, my_new_system)
+        .chain()
+        .run_if(in_state(PlayMode::Exploring)),
+)
+```
+
+Put click/Esc handlers **after** `use_item` if they should see the page that just opened this frame.
+
+If the system should run **while the page is open** (pulse a widget, hover), it still goes in this chain — look/move already stop because they check `OpenInspection`. Do not switch `PlayMode` for inspect.
+
+Spawn-only systems:
+
+```rust
+.add_systems(OnEnter(GameState::Playing), (spawn_prompt, spawn_page))
+```
+
+---
+
+## 8. Querying extra data on the same object
+
+The focused entity may also have `NpcKind`, `NpcStats`, etc. Add another query and `.get` the **same** entity:
+
+```rust
+fn use_item(
+    // ...
+    inspect_info: Query<&InspectInfo>,
+    kinds: Query<&NpcKind>,
+) {
+    let entity = focused.entity()?;
+    let Ok(info) = inspect_info.get(entity) else { return; };
+    let kind = kinds.get(entity).ok(); // None if it is a box, not an NPC
+}
+```
+
+Do not put NPC stats into `InspectInfo` unless every inspectable has them. Optional data = optional `Query` + `.get().ok()`.
+
+---
+
+## 9. Static chrome vs per-object data
+
+| Kind | Where it lives | Example |
+| --- | --- | --- |
+| Same for every inspect | Spawn in `page.rs` only | `"Esc to close"`, dim backdrop |
+| Different per object | Field on `InspectInfo` (or another component) + copy in `use_item` | title, body, portrait |
+| Changes while open | System that `Query`s the widget + `Res<Time>` | fade, blink |
+
+A Close **button**: spawn `Button` in `page.rs`, new system with `Query<&Interaction, With<CloseInspectButton>>`. On click, do the same three lines as Esc (`open.close()`, hide page, lock cursor). Extract those three lines into a small function both can call if you want.
+
+---
+
+## 10. Images later
+
+Put the handle on the object when you spawn it, not on E:
+
+```rust
+// InspectInfo
+pub portrait: Option<Handle<Image>>,
+
+// widget
+#[derive(Component)]
+struct InspectionPortrait;
+
+// spawn_page: ImageNode::default() + InspectionPortrait, maybe Hidden
+
+// use_item
+mut portraits: Query<&mut ImageNode, With<InspectionPortrait>>,
+```
+
+Track the image in `queue_assets` (`src/screens/loading.rs`) so Loading waits for it.
+
+---
+
+## 11. Do not
+
+- `commands.spawn` a new `InspectionPage` on every E (stacked overlays).
+- Put inspect UI in `scene/setup.rs` or `player/`.
+- Animate `TextFont.font_size` (reflows). Use `TextColor` or `UiTransform.scale`.
+- Use `PlayMode::Match` for this overlay. Match is combat.
+- Mark the floor `Interactable`.
+- Forget `Interactable` **and** `InspectInfo` on the 3D entity. Ray hits colliders; E reads `InspectInfo`.
+
+---
+
+## 12. Checklist when E “does nothing”
+
+1. Entity has `Interactable` and a **collider** (ray hits physics, not the picture).
+2. Entity has `InspectInfo`.
+3. You are in `PlayMode::Exploring` (inspect systems do not run in `Match`).
+4. `OpenInspection` is not stuck `Some` — press Esc.
+5. New widget: marker on the spawned node **and** a `Query` in `use_item`.
+6. New system: listed in `InteractionPlugin`.
+
+Start with **§6 body text**. That is the same pattern as title, buttons, and portraits.

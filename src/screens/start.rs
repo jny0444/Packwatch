@@ -66,7 +66,7 @@ fn start_game(
 
 fn pulse_start_hint(time: Res<Time>, mut hints: Query<&mut TextColor, With<StartHint>>) {
     let t = (time.elapsed_secs() * 2.4).sin() * 0.5 + 0.5;
-    let lightness = 0.2 + 0.82 * t;
+    let lightness = 0.5 + 0.5 * t;
     for mut color in &mut hints {
         *color = TextColor(Color::srgb(lightness, lightness, lightness + 0.03));
     }
