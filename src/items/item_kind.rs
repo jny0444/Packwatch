@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::items::item_def::ItemDef;
 use crate::items::types::{BeerTypes, CigTypes, GumTypes};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum ItemKind {
     Cig(CigTypes),
     Beer(BeerTypes),

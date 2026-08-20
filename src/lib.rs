@@ -15,6 +15,8 @@ use player::PlayerPlugin;
 use scene::ScenePlugin;
 use screens::ScreensPlugin;
 
+use crate::items::ItemsPlugin;
+
 pub struct PackwatchPlugin;
 
 impl Plugin for PackwatchPlugin {
@@ -25,6 +27,7 @@ impl Plugin for PackwatchPlugin {
             CameraPlugin,
             PlayerPlugin,
             InteractionPlugin,
+            ItemsPlugin,
         ));
     }
 }

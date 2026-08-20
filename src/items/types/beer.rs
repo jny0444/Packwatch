@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::items::item_def::ItemDef;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum BeerTypes {
     BudweiserMagnum,
     KingfisherUltra,
