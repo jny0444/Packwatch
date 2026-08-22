@@ -2,6 +2,7 @@ use bevy::{prelude::*, window::CursorOptions};
 
 use crate::camera::set_cursor_locked;
 use crate::interactions::components::{InspectionPage, InspectionTitle, OpenInspection};
+use crate::items::ShopPage;
 use crate::screens::GameState;
 
 pub fn spawn_page(mut commands: Commands) {
@@ -39,7 +40,8 @@ pub fn spawn_page(mut commands: Commands) {
 pub fn close_page(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut open: ResMut<OpenInspection>,
-    mut page: Query<&mut Visibility, With<InspectionPage>>,
+    mut page: Query<&mut Visibility, (With<InspectionPage>, Without<ShopPage>)>,
+    mut shop: Query<&mut Visibility, (With<ShopPage>, Without<InspectionPage>)>,
     mut cursor_options: Single<&mut CursorOptions>,
 ) {
     if !open.is_open() {
@@ -52,6 +54,9 @@ pub fn close_page(
     open.close();
 
     if let Ok(mut visibility) = page.single_mut() {
+        *visibility = Visibility::Hidden;
+    }
+    if let Ok(mut visibility) = shop.single_mut() {
         *visibility = Visibility::Hidden;
     }
 

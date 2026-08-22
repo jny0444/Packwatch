@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowCloseRequested};
 
 pub mod hud;
 pub mod inventory;
@@ -14,11 +14,16 @@ pub use inventory::{Inventory, Stack};
 pub use item_def::ItemDef;
 pub use item_kind::ItemKind;
 pub use pocket::Pocket;
+pub use shop::ShopPage;
 
 use crate::{
     items::{
         hud::{spawn_wallet_hud, update_wallet_hud},
         save::{load_save, save_inventory},
+        shop::{
+            animate_purchase, rotate_preview, shop_interact, spawn_shop_page, sync_preview_layers,
+            sync_shop_preview, update_shop_visuals, ShopUi, SpendFlash,
+        },
         wallet::Wallet,
     },
     screens::GameState,
@@ -30,13 +35,25 @@ impl Plugin for ItemsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Inventory>()
             .init_resource::<Wallet>()
-            .add_systems(
-                Update,
-                update_wallet_hud.run_if(in_state(GameState::Playing)),
-            )
+            .init_resource::<SpendFlash>()
+            .init_resource::<ShopUi>()
             .add_systems(
                 OnEnter(GameState::Playing),
-                (load_into_world, spawn_wallet_hud),
+                (load_into_world, spawn_wallet_hud, spawn_shop_page),
+            )
+            .add_systems(
+                Update,
+                (
+                    update_wallet_hud,
+                    shop_interact,
+                    update_shop_visuals,
+                    sync_shop_preview,
+                    rotate_preview,
+                    sync_preview_layers,
+                    animate_purchase,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::Playing)),
             )
             .add_systems(OnExit(GameState::Playing), save_from_world)
             .add_systems(Last, save_on_quit);
@@ -54,12 +71,16 @@ fn save_from_world(inventory: Res<Inventory>, wallet: Res<Wallet>) {
 }
 
 fn save_on_quit(
+    close: MessageReader<WindowCloseRequested>,
     exit: MessageReader<AppExit>,
     state: Res<State<GameState>>,
     inventory: Res<Inventory>,
     wallet: Res<Wallet>,
 ) {
-    if exit.is_empty() || *state.get() != GameState::Playing {
+    if close.is_empty() && exit.is_empty() {
+        return;
+    }
+    if *state.get() != GameState::Playing {
         return;
     }
     save_inventory(&inventory, &wallet);

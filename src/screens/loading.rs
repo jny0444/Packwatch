@@ -41,6 +41,18 @@ fn queue_assets(asset_server: &AssetServer, assets: &mut GameAssets) {
     assets.track(asset_server.load::<WorldAsset>(
         GltfAssetLabel::Scene(0).from_asset("models/characters/guide/guide.glb"),
     ));
+    assets.track(asset_server.load::<WorldAsset>(
+        GltfAssetLabel::Scene(0).from_asset("models/items/cigs/cig.glb"),
+    ));
+    assets.track(asset_server.load::<WorldAsset>(
+        GltfAssetLabel::Scene(0).from_asset("models/items/beer/beer.glb"),
+    ));
+    assets.track(asset_server.load::<WorldAsset>(
+        GltfAssetLabel::Scene(0).from_asset("models/items/gum/gum.glb"),
+    ));
+    assets.track(asset_server.load::<WorldAsset>(
+        GltfAssetLabel::Scene(0).from_asset("models/items/lighter/lighter.glb"),
+    ));
 }
 
 fn spawn_loading(mut commands: Commands, asset_server: Res<AssetServer>) {

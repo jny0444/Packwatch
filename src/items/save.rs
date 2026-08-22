@@ -1,5 +1,6 @@
 use std::{fs, path::Path};
 
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::items::{Inventory, wallet::Wallet};
@@ -27,10 +28,16 @@ pub fn save_inventory(inventory: &Inventory, wallet: &Wallet) {
         amount: wallet.balance,
     };
     let Ok(json) = serde_json::to_string_pretty(&save) else {
+        error!("failed to serialize save");
         return;
     };
-    let _ = fs::create_dir_all("saves");
-    let _ = fs::write(SAVE_PATH, json);
+    if let Err(err) = fs::create_dir_all("saves") {
+        error!("failed to create saves directory: {err}");
+        return;
+    }
+    if let Err(err) = fs::write(SAVE_PATH, json) {
+        error!("failed to write {SAVE_PATH}: {err}");
+    }
 }
 
 pub fn load_save() -> LoadedSave {
