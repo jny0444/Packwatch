@@ -5,8 +5,8 @@ use crate::items::{ItemKind, Pocket};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Stack {
-    kind: ItemKind,
-    count: u32,
+    pub kind: ItemKind,
+    pub count: u32,
 }
 
 #[derive(Resource, Clone, Serialize, Deserialize)]
@@ -20,6 +20,13 @@ impl Inventory {
         Self {
             items: vec![None; Pocket::Items.max_slots()],
             key_items: vec![None; Pocket::KeyItems.max_slots()],
+        }
+    }
+
+    pub fn slots(&self, pocket: Pocket) -> &[Option<Stack>] {
+        match pocket {
+            Pocket::Items => &self.items,
+            Pocket::KeyItems => &self.key_items,
         }
     }
 
@@ -77,6 +84,52 @@ impl Inventory {
 
         *self = next;
         true
+    }
+
+    pub fn has(&self, kind: ItemKind, n: u32) -> bool {
+        if n == 0 {
+            return true;
+        }
+
+        let def = kind.def();
+        let count: u32 = self
+            .slots(def.pocket)
+            .iter()
+            .flatten()
+            .filter(|stack| stack.kind == kind)
+            .map(|stack| stack.count)
+            .sum();
+        count >= n
+    }
+
+    pub fn remove(&mut self, kind: ItemKind, mut amount: u32) -> bool {
+        if amount == 0 {
+            return true;
+        }
+        if !self.has(kind, amount) {
+            return false;
+        }
+
+        let def = kind.def();
+        for slot in self.slots_mut(def.pocket) {
+            if amount == 0 {
+                break;
+            }
+            let Some(stack) = slot else {
+                continue;
+            };
+            if stack.kind != kind {
+                continue;
+            }
+            let take = amount.min(stack.count);
+            stack.count -= take;
+            amount -= take;
+            if stack.count == 0 {
+                *slot = None;
+            }
+        }
+
+        amount == 0
     }
 }
 

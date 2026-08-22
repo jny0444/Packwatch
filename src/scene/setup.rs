@@ -91,10 +91,11 @@ pub fn setup(
         &mut commands,
         &asset_server,
         SceneModelTemplate::gltf(
-            "Test Character",
+            "ShopKeeper",
             "models/characters/nechaev/nechaev.gltf",
             Vec3::new(0.0, 0.0, -3.0),
-        ),
+        )
+        .as_npc(NpcKind::ShopKeeper),
     );
 
     spawn_scene_model(
@@ -108,6 +109,18 @@ pub fn setup(
         .with_scale(Vec3::splat(0.55))
         .as_npc(NpcKind::Guide),
     );
+
+    // spawn_scene_model(
+    //     &mut commands,
+    //     &asset_server,
+    //     SceneModelTemplate::gltf(
+    //         "ShopKeeper",
+    //         "models/characters/felipe/felipe.glb",
+    //         Vec3::new(1.0, 0.0, 1.0),
+    //     )
+    //     .with_scale(Vec3::splat(0.55))
+    //     .as_npc(NpcKind::ShopKeeper),
+    // );
 
     spawn_player(&mut commands, Vec3::new(0.0, 0.85, 0.0));
 }
