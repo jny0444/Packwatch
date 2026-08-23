@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::WindowCloseRequested};
 
+pub mod bag;
 pub mod hud;
 pub mod inventory;
 pub mod item_def;
@@ -10,6 +11,7 @@ pub mod shop;
 pub mod types;
 pub mod wallet;
 
+pub use bag::InventoryPage;
 pub use inventory::{Inventory, Stack};
 pub use item_def::ItemDef;
 pub use item_kind::ItemKind;
@@ -18,11 +20,12 @@ pub use shop::ShopPage;
 
 use crate::{
     items::{
+        bag::{bag_interact, spawn_bag_page, update_bag_visuals, BagUi},
         hud::{spawn_wallet_hud, update_wallet_hud},
         save::{load_save, save_inventory},
         shop::{
-            animate_purchase, rotate_preview, shop_interact, spawn_shop_page, sync_preview_layers,
-            sync_shop_preview, update_shop_visuals, ShopUi, SpendFlash,
+            ShopUi, SpendFlash, animate_purchase, rotate_preview, shop_interact, spawn_shop_page,
+            sync_preview_layers, sync_shop_preview, update_shop_visuals,
         },
         wallet::Wallet,
     },
@@ -37,15 +40,23 @@ impl Plugin for ItemsPlugin {
             .init_resource::<Wallet>()
             .init_resource::<SpendFlash>()
             .init_resource::<ShopUi>()
+            .init_resource::<BagUi>()
             .add_systems(
                 OnEnter(GameState::Playing),
-                (load_into_world, spawn_wallet_hud, spawn_shop_page),
+                (
+                    load_into_world,
+                    spawn_wallet_hud,
+                    spawn_shop_page,
+                    spawn_bag_page,
+                ),
             )
             .add_systems(
                 Update,
                 (
                     update_wallet_hud,
                     shop_interact,
+                    bag_interact,
+                    update_bag_visuals,
                     update_shop_visuals,
                     sync_shop_preview,
                     rotate_preview,

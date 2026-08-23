@@ -21,6 +21,7 @@ use crate::{
 const BUTTON_IDLE: Color = Color::srgb(0.2, 0.2, 0.22);
 const BUTTON_SELECTED: Color = Color::srgb(0.32, 0.36, 0.42);
 const BUY_IDLE: Color = Color::srgb(0.22, 0.38, 0.28);
+const BUY_FULL: Color = Color::srgb(0.28, 0.18, 0.18);
 const FLASH_SECS: f32 = 0.45;
 const ROW_GAP: f32 = 8.0;
 const PREVIEW_LAYER: usize = 1;
@@ -128,12 +129,18 @@ impl ShopUi {
         KIOSK_STOCK[self.selected]
     }
 
-    fn max_qty(&self) -> u32 {
-        self.listing().kind.def().max_stack.min(99)
+    fn max_qty(&self, inventory: &Inventory) -> u32 {
+        let cap = self.listing().kind.def().max_stack.min(99);
+        cap.min(inventory.space_for(self.listing().kind))
     }
 
-    fn clamp_qty(&mut self) {
-        self.qty = self.qty.clamp(1, self.max_qty());
+    fn clamp_qty(&mut self, inventory: &Inventory) {
+        let max = self.max_qty(inventory);
+        self.qty = if max == 0 {
+            1
+        } else {
+            self.qty.clamp(1, max)
+        };
     }
 }
 
@@ -494,14 +501,14 @@ pub(crate) fn shop_interact(
     let count = KIOSK_STOCK.len();
     if keyboard.just_pressed(KeyCode::ArrowDown) {
         ui.selected = (ui.selected + 1) % count;
-        ui.clamp_qty();
+        ui.clamp_qty(&inventory);
     }
     if keyboard.just_pressed(KeyCode::ArrowUp) {
         ui.selected = (ui.selected + count - 1) % count;
-        ui.clamp_qty();
+        ui.clamp_qty(&inventory);
     }
     if keyboard.just_pressed(KeyCode::ArrowRight) {
-        ui.qty = (ui.qty + 1).min(ui.max_qty());
+        ui.qty = (ui.qty + 1).min(ui.max_qty(&inventory).max(1));
     }
     if keyboard.just_pressed(KeyCode::ArrowLeft) {
         ui.qty = ui.qty.saturating_sub(1).max(1);
@@ -514,17 +521,17 @@ pub(crate) fn shop_interact(
         };
         if dy > 0.0 {
             ui.selected = (ui.selected + count - 1) % count;
-            ui.clamp_qty();
+            ui.clamp_qty(&inventory);
         } else if dy < 0.0 {
             ui.selected = (ui.selected + 1) % count;
-            ui.clamp_qty();
+            ui.clamp_qty(&inventory);
         }
     }
 
     for (interaction, row) in &rows {
         if *interaction == Interaction::Pressed {
             ui.selected = row.index;
-            ui.clamp_qty();
+            ui.clamp_qty(&inventory);
         }
     }
 
@@ -534,7 +541,7 @@ pub(crate) fn shop_interact(
         }
         match button {
             ShopQtyButton::Minus => ui.qty = ui.qty.saturating_sub(1).max(1),
-            ShopQtyButton::Plus => ui.qty = (ui.qty + 1).min(ui.max_qty()),
+            ShopQtyButton::Plus => ui.qty = (ui.qty + 1).min(ui.max_qty(&inventory).max(1)),
         }
     }
 
@@ -573,20 +580,25 @@ fn try_buy(
     buy_entity: Entity,
 ) {
     let listing = ui.listing();
-    let cost = listing.price.saturating_mul(ui.qty);
+    let qty = ui.qty;
+    if !inventory.can_add(listing.kind, qty) {
+        return;
+    }
+    let cost = listing.price.saturating_mul(qty);
     if !wallet.spend(cost) {
         return;
     }
-    if !inventory.add(listing.kind, ui.qty) {
+    if !inventory.add(listing.kind, qty) {
         wallet.add(cost);
         return;
     }
+    ui.clamp_qty(inventory);
 
     flash.remaining = FLASH_SECS;
-    flash.item_name = if ui.qty == 1 {
+    flash.item_name = if qty == 1 {
         listing.kind.def().name.to_string()
     } else {
-        format!("{} × {}", listing.kind.def().name, ui.qty)
+        format!("{} × {}", listing.kind.def().name, qty)
     };
     commands.entity(buy_entity).insert(PurchasePulse {
         remaining: FLASH_SECS,
@@ -597,9 +609,11 @@ fn try_buy(
 pub(crate) fn update_shop_visuals(
     shop: Query<&Visibility, With<ShopPage>>,
     ui: Res<ShopUi>,
+    inventory: Res<Inventory>,
     mut rows: Query<(&ShopRow, &mut BackgroundColor, &ComputedNode), Without<ShopBuyConfirm>>,
     mut fields: Query<(&ShopField, &mut Text)>,
     mut lists: Query<(&mut ScrollPosition, &ComputedNode), With<ShopList>>,
+    mut buy: Query<&mut BackgroundColor, (With<ShopBuyConfirm>, Without<PurchasePulse>)>,
 ) {
     if !shop_visible(&shop) {
         return;
@@ -632,6 +646,14 @@ pub(crate) fn update_shop_visuals(
             ShopField::Price => format!("${} each   ·   ${total} total", listing.price),
             ShopField::Qty => format!("{}", ui.qty),
         };
+    }
+
+    if let Ok(mut color) = buy.single_mut() {
+        *color = BackgroundColor(if inventory.can_add(listing.kind, ui.qty) {
+            BUY_IDLE
+        } else {
+            BUY_FULL
+        });
     }
 
     if let Ok((mut scroll, node)) = lists.single_mut() {

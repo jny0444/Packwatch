@@ -25,23 +25,33 @@ pub struct InspectInfo {
 }
 
 #[derive(Resource, Default)]
-pub struct OpenInspection(Option<Entity>);
+pub struct OpenInspection {
+    open: bool,
+    target: Option<Entity>,
+}
 
 impl OpenInspection {
     pub fn entity(&self) -> Option<Entity> {
-        self.0
+        self.target
     }
 
     pub fn is_open(&self) -> bool {
-        self.0.is_some()
+        self.open
     }
 
     pub fn open(&mut self, entity: Entity) {
-        self.0 = Some(entity);
+        self.open = true;
+        self.target = Some(entity);
+    }
+
+    pub fn open_bag(&mut self) {
+        self.open = true;
+        self.target = None;
     }
 
     pub fn close(&mut self) {
-        self.0 = None;
+        self.open = false;
+        self.target = None;
     }
 }
 

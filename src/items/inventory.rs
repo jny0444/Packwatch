@@ -86,6 +86,27 @@ impl Inventory {
         true
     }
 
+    pub fn space_for(&self, kind: ItemKind) -> u32 {
+        let def = kind.def();
+        let max_stack = def.max_stack;
+        let mut space = 0u32;
+        let mut empty = 0u32;
+        for slot in self.slots(def.pocket) {
+            match slot {
+                Some(stack) if stack.kind == kind => {
+                    space += max_stack.saturating_sub(stack.count);
+                }
+                None => empty += 1,
+                _ => {}
+            }
+        }
+        space.saturating_add(empty.saturating_mul(max_stack))
+    }
+
+    pub fn can_add(&self, kind: ItemKind, amount: u32) -> bool {
+        amount == 0 || self.space_for(kind) >= amount
+    }
+
     pub fn has(&self, kind: ItemKind, n: u32) -> bool {
         if n == 0 {
             return true;
