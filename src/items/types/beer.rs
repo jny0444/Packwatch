@@ -21,4 +21,13 @@ impl BeerTypes {
 
         ItemDef::item(name, description, dizziness_delta, false)
     }
+
+    pub fn model(self) -> &'static str {
+        match self {
+            BeerTypes::BudweiserMagnum => "models/items/beer/budweiser_magnum.glb",
+            BeerTypes::KingfisherStrong => "models/items/beer/kingfisher_strong.glb",
+            BeerTypes::Corona => "models/items/beer/corona.glb",
+            BeerTypes::Guinness => "models/items/beer/guinness.glb",
+        }
+    }
 }

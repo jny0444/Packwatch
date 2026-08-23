@@ -21,4 +21,11 @@ impl GumTypes {
 
         ItemDef::item(name, description, dizziness_delta, false)
     }
+
+    pub fn model(self) -> &'static str {
+        match self {
+            GumTypes::MintStrongGum => "models/items/gum/mint_strong_gum.glb",
+            GumTypes::LightGum => "models/items/gum/light_gum.glb",
+        }
+    }
 }

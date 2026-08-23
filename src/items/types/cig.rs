@@ -45,4 +45,20 @@ impl CigTypes {
 
         ItemDef::item(name, description, dizziness_delta, true)
     }
+
+    pub fn model(self) -> &'static str {
+        match self {
+            CigTypes::MarlboroRed => "models/items/cigs/marlboro_red.glb",
+            CigTypes::MarlboroGold => "models/items/cigs/marlboro_gold.glb",
+            CigTypes::MarlboroCompact => "models/items/cigs/marlboro_compact.glb",
+            CigTypes::MarlboroAdvance => "models/items/cigs/marlboro_advance.glb",
+            CigTypes::DoubleHappiness11mg => "models/items/cigs/double_happiness_11mg.glb",
+            CigTypes::DoubleHappiness6mg => "models/items/cigs/double_happiness_6mg.glb",
+            CigTypes::ClassicIndieMint => "models/items/cigs/classic_indie_mint.glb",
+            CigTypes::ClassicConnect => "models/items/cigs/classic_connect.glb",
+            CigTypes::CamelYellow => "models/items/cigs/camel_yellow.glb",
+            CigTypes::CamelBlue => "models/items/cigs/camel_blue.glb",
+            CigTypes::CamelConnect => "models/items/cigs/camel_connect.glb",
+        }
+    }
 }

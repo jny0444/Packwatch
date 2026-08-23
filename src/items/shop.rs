@@ -22,7 +22,7 @@ const BUTTON_IDLE: Color = Color::srgb(0.2, 0.2, 0.22);
 const BUTTON_SELECTED: Color = Color::srgb(0.32, 0.36, 0.42);
 const BUY_IDLE: Color = Color::srgb(0.22, 0.38, 0.28);
 const FLASH_SECS: f32 = 0.45;
-const ROW_HEIGHT: f32 = 48.0;
+const ROW_GAP: f32 = 8.0;
 const PREVIEW_LAYER: usize = 1;
 const PREVIEW_POS: Vec3 = Vec3::new(0.0, -200.0, 0.0);
 
@@ -99,16 +99,8 @@ pub(crate) struct ShopPreviewCamera;
 #[derive(Component)]
 pub(crate) struct ShopPreviewStage;
 
-#[derive(Component, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum PreviewSlot {
-    Cig,
-    Beer,
-    Gum,
-    Lighter,
-}
-
 #[derive(Component)]
-pub(crate) struct ShopPreviewModel(PreviewSlot);
+pub(crate) struct ShopPreviewModel(ItemKind);
 
 #[derive(Resource)]
 pub(crate) struct ShopUi {
@@ -145,12 +137,12 @@ impl ShopUi {
     }
 }
 
-fn preview_slot(kind: ItemKind) -> PreviewSlot {
+fn preview_transform(kind: ItemKind) -> (f32, Vec3) {
     match kind {
-        ItemKind::Cig(_) => PreviewSlot::Cig,
-        ItemKind::Beer(_) => PreviewSlot::Beer,
-        ItemKind::Gum(_) => PreviewSlot::Gum,
-        ItemKind::Lighter => PreviewSlot::Lighter,
+        ItemKind::Cig(_) => (10.5, Vec3::new(1.14, -6.22, -1.22)),
+        ItemKind::Beer(_) => (0.39, Vec3::new(0.0, -0.06, 0.0)),
+        ItemKind::Gum(_) => (0.36, Vec3::ZERO),
+        ItemKind::Lighter => (2.8, Vec3::ZERO),
     }
 }
 
@@ -223,66 +215,35 @@ fn spawn_preview_world(
                 layers.clone(),
             ));
 
-            spawn_preview_model(
-                stage,
-                asset_server,
-                layers.clone(),
-                PreviewSlot::Cig,
-                "models/items/cigs/cig.glb",
-                10.5,
-                Vec3::new(1.14, -6.22, -1.22),
-            );
-            spawn_preview_model(
-                stage,
-                asset_server,
-                layers.clone(),
-                PreviewSlot::Beer,
-                "models/items/beer/beer.glb",
-                0.39,
-                Vec3::new(0.0, -0.06, 0.0),
-            );
-            spawn_preview_model(
-                stage,
-                asset_server,
-                layers.clone(),
-                PreviewSlot::Gum,
-                "models/items/gum/gum.glb",
-                0.36,
-                Vec3::ZERO,
-            );
-            spawn_preview_model(
-                stage,
-                asset_server,
-                layers.clone(),
-                PreviewSlot::Lighter,
-                "models/items/lighter/lighter.glb",
-                2.8,
-                Vec3::ZERO,
-            );
+            spawn_preview_model(stage, asset_server, layers.clone(), KIOSK_STOCK[0].kind);
         });
 
     camera
+}
+
+fn preview_root(asset_server: &AssetServer, kind: ItemKind) -> WorldAssetRoot {
+    WorldAssetRoot(
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset(kind.resolved_model())),
+    )
 }
 
 fn spawn_preview_model(
     stage: &mut ChildSpawnerCommands,
     asset_server: &AssetServer,
     layers: RenderLayers,
-    slot: PreviewSlot,
-    path: &'static str,
-    scale: f32,
-    offset: Vec3,
+    kind: ItemKind,
 ) {
+    let (scale, offset) = preview_transform(kind);
     stage.spawn((
-        ShopPreviewModel(slot),
+        ShopPreviewModel(kind),
         FixGltfAlpha,
-        WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(path))),
+        preview_root(asset_server, kind),
         Transform {
             translation: offset,
             scale: Vec3::splat(scale),
             ..default()
         },
-        Visibility::Hidden,
+        Visibility::Inherited,
         layers,
     ));
 }
@@ -342,10 +303,11 @@ fn spawn_item_list(panel: &mut ChildSpawnerCommands) {
                 ShopList,
                 Node {
                     flex_direction: FlexDirection::Column,
-                    row_gap: px(8),
+                    row_gap: px(ROW_GAP),
                     width: percent(100),
                     flex_grow: 1.0,
                     min_height: px(0),
+                    padding: UiRect::bottom(px(ROW_GAP)),
                     overflow: Overflow::scroll_y(),
                     ..default()
                 },
@@ -635,7 +597,7 @@ fn try_buy(
 pub(crate) fn update_shop_visuals(
     shop: Query<&Visibility, With<ShopPage>>,
     ui: Res<ShopUi>,
-    mut rows: Query<(&ShopRow, &mut BackgroundColor), Without<ShopBuyConfirm>>,
+    mut rows: Query<(&ShopRow, &mut BackgroundColor, &ComputedNode), Without<ShopBuyConfirm>>,
     mut fields: Query<(&ShopField, &mut Text)>,
     mut lists: Query<(&mut ScrollPosition, &ComputedNode), With<ShopList>>,
 ) {
@@ -647,12 +609,20 @@ pub(crate) fn update_shop_visuals(
     let def = listing.kind.def();
     let total = listing.price.saturating_mul(ui.qty);
 
-    for (row, mut color) in &mut rows {
+    let mut row_top = 0.0;
+    let mut row_height = 0.0;
+    for (row, mut color, row_node) in &mut rows {
         *color = BackgroundColor(if row.index == ui.selected {
             BUTTON_SELECTED
         } else {
             BUTTON_IDLE
         });
+        let height = row_node.size().y * row_node.inverse_scale_factor();
+        if row.index < ui.selected {
+            row_top += height + ROW_GAP;
+        } else if row.index == ui.selected {
+            row_height = height;
+        }
     }
 
     for (field, mut text) in &mut fields {
@@ -668,8 +638,7 @@ pub(crate) fn update_shop_visuals(
         let view = node.size().y * node.inverse_scale_factor();
         let content = node.content_size().y * node.inverse_scale_factor();
         let max_scroll = (content - view).max(0.0);
-        let row_top = ui.selected as f32 * ROW_HEIGHT;
-        let row_bottom = row_top + ROW_HEIGHT;
+        let row_bottom = row_top + row_height;
         if row_top < scroll.y {
             scroll.y = row_top;
         } else if row_bottom > scroll.y + view {
@@ -680,29 +649,39 @@ pub(crate) fn update_shop_visuals(
 }
 
 pub(crate) fn sync_shop_preview(
-    mut vis: ParamSet<(
-        Query<&Visibility, With<ShopPage>>,
-        Query<(&ShopPreviewModel, &mut Visibility), Without<ShopPage>>,
-    )>,
+    shop: Query<&Visibility, With<ShopPage>>,
     ui: Res<ShopUi>,
+    asset_server: Res<AssetServer>,
     mut cameras: Query<&mut Camera, With<ShopPreviewCamera>>,
+    mut preview: Query<(&mut ShopPreviewModel, &mut Transform, &mut WorldAssetRoot)>,
 ) {
-    let open = vis
-        .p0()
-        .single()
-        .is_ok_and(|visibility| *visibility == Visibility::Visible);
-
+    let open = shop_visible(&shop);
     if let Ok(mut camera) = cameras.single_mut() {
         camera.is_active = open;
     }
+    if !open {
+        return;
+    }
 
-    let slot = preview_slot(ui.listing().kind);
-    for (model, mut visibility) in vis.p1().iter_mut() {
-        *visibility = if open && model.0 == slot {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+    let kind = ui.listing().kind;
+    let Ok((mut model, mut transform, mut root)) = preview.single_mut() else {
+        return;
+    };
+    if model.0 == kind {
+        return;
+    }
+
+    model.0 = kind;
+    let (scale, offset) = preview_transform(kind);
+    *transform = Transform {
+        translation: offset,
+        scale: Vec3::splat(scale),
+        ..default()
+    };
+
+    let next = preview_root(&asset_server, kind);
+    if root.0 != next.0 {
+        *root = next;
     }
 }
 

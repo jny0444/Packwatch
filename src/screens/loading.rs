@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use crate::items::shop::KIOSK_STOCK;
 use crate::screens::GameState;
 
 pub struct LoadingPlugin;
@@ -41,18 +42,11 @@ fn queue_assets(asset_server: &AssetServer, assets: &mut GameAssets) {
     assets.track(asset_server.load::<WorldAsset>(
         GltfAssetLabel::Scene(0).from_asset("models/characters/guide/guide.glb"),
     ));
-    assets.track(asset_server.load::<WorldAsset>(
-        GltfAssetLabel::Scene(0).from_asset("models/items/cigs/cig.glb"),
-    ));
-    assets.track(asset_server.load::<WorldAsset>(
-        GltfAssetLabel::Scene(0).from_asset("models/items/beer/beer.glb"),
-    ));
-    assets.track(asset_server.load::<WorldAsset>(
-        GltfAssetLabel::Scene(0).from_asset("models/items/gum/gum.glb"),
-    ));
-    assets.track(asset_server.load::<WorldAsset>(
-        GltfAssetLabel::Scene(0).from_asset("models/items/lighter/lighter.glb"),
-    ));
+    for listing in KIOSK_STOCK {
+        assets.track(asset_server.load::<WorldAsset>(
+            GltfAssetLabel::Scene(0).from_asset(listing.kind.resolved_model()),
+        ));
+    }
 }
 
 fn spawn_loading(mut commands: Commands, asset_server: Res<AssetServer>) {
