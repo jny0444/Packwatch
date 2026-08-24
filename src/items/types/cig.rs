@@ -12,9 +12,11 @@ pub enum CigTypes {
     DoubleHappiness6mg,
     ClassicIndieMint,
     ClassicConnect,
+    StellarDoubleShift,
     CamelYellow,
     CamelBlue,
     CamelConnect,
+    Bidi,
 }
 
 impl CigTypes {
@@ -79,9 +81,18 @@ impl CigTypes {
                 1,
                 4,
             ),
+            CigTypes::StellarDoubleShift => (
+                "Stellar Double Shift",
+                "Double the fun, double the menthol",
+                5.0,
+                11.0,
+                1,
+                4,
+            ),
             CigTypes::CamelYellow => ("Camel Yellow", "Heavy. Thick smoke.", 7.0, 16.0, 2, 4),
             CigTypes::CamelBlue => ("Camel Blue", "Milder camel. Slow burn.", 4.0, 10.0, 1, 4),
             CigTypes::CamelConnect => ("Camel Connect", "Short pack smoke.", 5.0, 11.0, 1, 4),
+            CigTypes::Bidi => ("Bidi", "Leaf wrap. Burns fast, hits hard.", 6.0, 14.0, 1, 3),
         };
 
         ItemDef::item(
@@ -102,9 +113,11 @@ impl CigTypes {
             CigTypes::DoubleHappiness6mg => "models/items/cigs/double_happiness_6mg.glb",
             CigTypes::ClassicIndieMint => "models/items/cigs/classic_indie_mint.glb",
             CigTypes::ClassicConnect => "models/items/cigs/classic_connect.glb",
+            CigTypes::StellarDoubleShift => "models/items/cigs/stellar_double_shift.glb",
             CigTypes::CamelYellow => "models/items/cigs/camel_yellow.glb",
             CigTypes::CamelBlue => "models/items/cigs/camel_blue.glb",
             CigTypes::CamelConnect => "models/items/cigs/camel_connect.glb",
+            CigTypes::Bidi => "models/items/cigs/bidi.glb",
         }
     }
 }

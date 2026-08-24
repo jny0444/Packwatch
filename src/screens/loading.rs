@@ -42,6 +42,9 @@ fn queue_assets(asset_server: &AssetServer, assets: &mut GameAssets) {
     assets.track(asset_server.load::<WorldAsset>(
         GltfAssetLabel::Scene(0).from_asset("models/characters/guide/guide.glb"),
     ));
+    assets.track(asset_server.load::<WorldAsset>(
+        GltfAssetLabel::Scene(0).from_asset("models/characters/felipe/felipe.glb"),
+    ));
     for listing in KIOSK_STOCK {
         assets.track(asset_server.load::<WorldAsset>(
             GltfAssetLabel::Scene(0).from_asset(listing.kind.resolved_model()),

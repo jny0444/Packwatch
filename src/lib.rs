@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod combat;
 pub mod interactions;
 pub mod items;
 pub mod npc;
@@ -10,6 +11,7 @@ pub mod templates;
 use bevy::prelude::*;
 
 use camera::CameraPlugin;
+use combat::CombatPlugin;
 use interactions::InteractionPlugin;
 use player::PlayerPlugin;
 use scene::ScenePlugin;
@@ -28,6 +30,7 @@ impl Plugin for PackwatchPlugin {
             PlayerPlugin,
             InteractionPlugin,
             ItemsPlugin,
+            CombatPlugin,
         ));
     }
 }

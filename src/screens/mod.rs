@@ -22,6 +22,26 @@ pub enum PlayMode {
     #[default]
     Exploring,
     Dialogue,
+    Match,
+}
+
+#[derive(Resource, Default)]
+pub struct ActiveMatch {
+    opponent: Option<Entity>,
+}
+
+impl ActiveMatch {
+    pub fn start(&mut self, opponent: Entity) {
+        self.opponent = Some(opponent);
+    }
+
+    pub fn opponent(&self) -> Option<Entity> {
+        self.opponent
+    }
+
+    pub fn clear(&mut self) {
+        self.opponent = None;
+    }
 }
 
 #[derive(Component)]
@@ -33,6 +53,7 @@ impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>()
             .add_sub_state::<PlayMode>()
+            .init_resource::<ActiveMatch>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.02, 0.03)))
             .add_systems(OnEnter(GameState::Loading), spawn_menu_camera)
             .add_systems(OnEnter(GameState::Start), spawn_menu_camera)

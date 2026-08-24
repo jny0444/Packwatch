@@ -41,6 +41,13 @@ impl ModelTemplate {
 }
 
 #[derive(Clone)]
+pub enum ScenePhysics {
+    Mesh(ColliderConstructor),
+    Capsule { radius: f32, height: f32 },
+    None,
+}
+
+#[derive(Clone)]
 pub struct SceneModelTemplate {
     pub title: String,
     pub asset_path: String,
@@ -49,7 +56,7 @@ pub struct SceneModelTemplate {
     pub rotation: Quat,
     pub scale: Vec3,
     pub interactable: bool,
-    pub collider: ColliderConstructor,
+    pub physics: ScenePhysics,
     pub npc: Option<NpcKind>,
 }
 
@@ -63,7 +70,7 @@ impl SceneModelTemplate {
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             interactable: true,
-            collider: ColliderConstructor::ConvexHullFromMesh,
+            physics: ScenePhysics::Mesh(ColliderConstructor::ConvexHullFromMesh),
             npc: None,
         }
     }
@@ -89,7 +96,17 @@ impl SceneModelTemplate {
     }
 
     pub fn with_trimesh_collider(mut self) -> Self {
-        self.collider = ColliderConstructor::TrimeshFromMesh;
+        self.physics = ScenePhysics::Mesh(ColliderConstructor::TrimeshFromMesh);
+        self
+    }
+
+    pub fn with_capsule(mut self, radius: f32, height: f32) -> Self {
+        self.physics = ScenePhysics::Capsule { radius, height };
+        self
+    }
+
+    pub fn without_physics(mut self) -> Self {
+        self.physics = ScenePhysics::None;
         self
     }
 
@@ -146,9 +163,27 @@ pub fn spawn_scene_model(
             rotation: template.rotation,
             scale: template.scale,
         },
-        RigidBody::Static,
-        ColliderConstructorHierarchy::new(template.collider),
     ));
+
+    match template.physics {
+        ScenePhysics::Mesh(constructor) => {
+            model.insert((
+                RigidBody::Static,
+                ColliderConstructorHierarchy::new(constructor),
+            ));
+        }
+        ScenePhysics::Capsule { radius, height } => {
+            let scale = template.scale.y.abs().max(1e-4);
+            model.with_children(|parent| {
+                parent.spawn((
+                    RigidBody::Static,
+                    Collider::capsule(radius / scale, height / scale),
+                    Transform::from_xyz(0.0, (height * 0.5 + radius) / scale, 0.0),
+                ));
+            });
+        }
+        ScenePhysics::None => {}
+    }
 
     if let Some(kind) = template.npc {
         model.insert((Npc, kind, kind.stats()));

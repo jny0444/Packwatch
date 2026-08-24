@@ -107,20 +107,18 @@ impl Inventory {
         amount == 0 || self.space_for(kind) >= amount
     }
 
-    pub fn has(&self, kind: ItemKind, n: u32) -> bool {
-        if n == 0 {
-            return true;
-        }
-
+    pub fn count(&self, kind: ItemKind) -> u32 {
         let def = kind.def();
-        let count: u32 = self
-            .slots(def.pocket)
+        self.slots(def.pocket)
             .iter()
             .flatten()
             .filter(|stack| stack.kind == kind)
             .map(|stack| stack.count)
-            .sum();
-        count >= n
+            .sum()
+    }
+
+    pub fn has(&self, kind: ItemKind, n: u32) -> bool {
+        n == 0 || self.count(kind) >= n
     }
 
     pub fn remove(&mut self, kind: ItemKind, mut amount: u32) -> bool {

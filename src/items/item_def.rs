@@ -35,12 +35,12 @@ impl ItemStats {
         }
     }
 
-    pub const fn beer(sp_attack: f32, ap_costs: u32) -> Self {
+    pub const fn beer(sp_attack: f32) -> Self {
         Self {
             player_dizziness: 0.0,
             enemy_dizziness: 0.0,
             sp_attack,
-            ap_costs,
+            ap_costs: 0,
             puffs: None,
         }
     }

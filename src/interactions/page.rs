@@ -4,6 +4,7 @@ use crate::camera::set_cursor_locked;
 use crate::interactions::components::{InspectionPage, InspectionTitle, OpenInspection};
 use crate::items::ShopPage;
 use crate::items::bag::InventoryPage;
+use crate::items::deck_builder::DeckPage;
 use crate::screens::GameState;
 
 pub fn spawn_page(mut commands: Commands) {
@@ -47,6 +48,7 @@ pub fn close_page(
             With<InspectionPage>,
             Without<ShopPage>,
             Without<InventoryPage>,
+            Without<DeckPage>,
         ),
     >,
     mut shop: Query<
@@ -55,6 +57,7 @@ pub fn close_page(
             With<ShopPage>,
             Without<InspectionPage>,
             Without<InventoryPage>,
+            Without<DeckPage>,
         ),
     >,
     mut bag: Query<
@@ -63,6 +66,16 @@ pub fn close_page(
             With<InventoryPage>,
             Without<InspectionPage>,
             Without<ShopPage>,
+            Without<DeckPage>,
+        ),
+    >,
+    mut deck: Query<
+        &mut Visibility,
+        (
+            With<DeckPage>,
+            Without<InspectionPage>,
+            Without<ShopPage>,
+            Without<InventoryPage>,
         ),
     >,
     mut cursor_options: Single<&mut CursorOptions>,
@@ -83,6 +96,9 @@ pub fn close_page(
         *visibility = Visibility::Hidden;
     }
     if let Ok(mut visibility) = bag.single_mut() {
+        *visibility = Visibility::Hidden;
+    }
+    if let Ok(mut visibility) = deck.single_mut() {
         *visibility = Visibility::Hidden;
     }
 

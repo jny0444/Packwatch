@@ -6,6 +6,7 @@ use crate::interactions::components::{
 };
 use crate::items::ShopPage;
 use crate::npc::NpcKind;
+use crate::screens::{ActiveMatch, PlayMode};
 
 pub fn use_item(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -17,6 +18,8 @@ pub fn use_item(
     mut shop: Query<&mut Visibility, (With<ShopPage>, Without<InspectionPage>)>,
     mut title: Query<&mut Text, With<InspectionTitle>>,
     mut cursor_options: Single<&mut CursorOptions>,
+    mut active: ResMut<ActiveMatch>,
+    mut next_mode: ResMut<NextState<PlayMode>>,
 ) {
     if open.is_open() {
         return;
@@ -37,6 +40,14 @@ pub fn use_item(
             *visibility = Visibility::Visible;
         }
 
+        set_cursor_locked(&mut cursor_options, false);
+        return;
+    }
+
+    if kinds.get(entity).is_ok_and(|kind| kind.is_fighter()) {
+        open.close();
+        active.start(entity);
+        next_mode.set(PlayMode::Match);
         set_cursor_locked(&mut cursor_options, false);
         return;
     }

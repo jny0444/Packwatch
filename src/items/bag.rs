@@ -3,7 +3,7 @@ use bevy::{ecs::query::QueryFilter, prelude::*, window::CursorOptions};
 use crate::{
     camera::set_cursor_locked,
     interactions::components::{InspectionPage, OpenInspection},
-    items::{Inventory, Pocket, ShopPage},
+    items::{Inventory, Pocket, ShopPage, deck_builder::DeckPage},
     screens::GameState,
 };
 
@@ -272,6 +272,7 @@ pub(crate) fn bag_interact(
             With<ShopPage>,
             Without<InspectionPage>,
             Without<InventoryPage>,
+            Without<DeckPage>,
         ),
     >,
     inspect: Query<
@@ -279,6 +280,16 @@ pub(crate) fn bag_interact(
         (
             With<InspectionPage>,
             Without<ShopPage>,
+            Without<InventoryPage>,
+            Without<DeckPage>,
+        ),
+    >,
+    deck: Query<
+        &Visibility,
+        (
+            With<DeckPage>,
+            Without<ShopPage>,
+            Without<InspectionPage>,
             Without<InventoryPage>,
         ),
     >,
@@ -288,6 +299,7 @@ pub(crate) fn bag_interact(
             With<InventoryPage>,
             Without<ShopPage>,
             Without<InspectionPage>,
+            Without<DeckPage>,
         ),
     >,
     tabs: Query<(&Interaction, &BagTab), Changed<Interaction>>,
@@ -295,7 +307,7 @@ pub(crate) fn bag_interact(
     mut cursor_options: Single<&mut CursorOptions>,
 ) {
     if keyboard.just_pressed(KeyCode::KeyI) {
-        if page_visible(&shop) || page_visible(&inspect) {
+        if page_visible(&shop) || page_visible(&inspect) || page_visible(&deck) {
             return;
         }
 

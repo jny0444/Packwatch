@@ -95,7 +95,8 @@ pub fn setup(
             "models/characters/nechaev/nechaev.gltf",
             Vec3::new(0.0, 0.0, -3.0),
         )
-        .as_npc(NpcKind::ShopKeeper),
+        .as_npc(NpcKind::ShopKeeper)
+        .with_capsule(0.5, 1.2),
     );
 
     spawn_scene_model(
@@ -107,20 +108,34 @@ pub fn setup(
             Vec3::new(2.0, 0.0, -2.0),
         )
         .with_scale(Vec3::splat(0.55))
-        .as_npc(NpcKind::Guide),
+        .as_npc(NpcKind::Guide)
+        .with_capsule(0.5, 1.2),
     );
 
-    // spawn_scene_model(
-    //     &mut commands,
-    //     &asset_server,
-    //     SceneModelTemplate::gltf(
-    //         "ShopKeeper",
-    //         "models/characters/felipe/felipe.glb",
-    //         Vec3::new(1.0, 0.0, 1.0),
-    //     )
-    //     .with_scale(Vec3::splat(0.55))
-    //     .as_npc(NpcKind::ShopKeeper),
-    // );
+    spawn_scene_model(
+        &mut commands,
+        &asset_server,
+        SceneModelTemplate::gltf(
+            "Light Smoker",
+            "models/characters/felipe/felipe.glb",
+            Vec3::new(-2.2, 0.0, -1.4),
+        )
+        .with_scale(Vec3::splat(0.55))
+        .as_npc(NpcKind::LightSmoker)
+        .with_capsule(0.5, 1.2),
+    );
+
+    spawn_scene_model(
+        &mut commands,
+        &asset_server,
+        SceneModelTemplate::gltf(
+            "Heavy Smoker",
+            "models/characters/nechaev/nechaev.gltf",
+            Vec3::new(3.2, 0.0, 1.6),
+        )
+        .as_npc(NpcKind::HeavySmoker)
+        .with_capsule(0.5, 1.2),
+    );
 
     spawn_player(&mut commands, Vec3::new(0.0, 0.85, 0.0));
 }

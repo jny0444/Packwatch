@@ -11,7 +11,7 @@ use bevy::{
 
 use crate::{
     items::{
-        Inventory, ItemKind,
+        Deck, Inventory, ItemKind, PlayerDeck,
         hud::WalletHud,
         types::{BeerTypes, CigTypes, GumTypes},
         wallet::Wallet,
@@ -505,6 +505,7 @@ pub(crate) fn shop_interact(
     mut wallet: ResMut<Wallet>,
     mut inventory: ResMut<Inventory>,
     mut flash: ResMut<SpendFlash>,
+    deck: Res<PlayerDeck>,
     mut commands: Commands,
 ) {
     if !shop_visible(&shop) {
@@ -565,6 +566,7 @@ pub(crate) fn shop_interact(
                 &mut wallet,
                 &mut inventory,
                 &mut flash,
+                &deck.0,
                 &mut commands,
                 entity,
             );
@@ -583,6 +585,7 @@ pub(crate) fn shop_interact(
             &mut wallet,
             &mut inventory,
             &mut flash,
+            &deck.0,
             &mut commands,
             entity,
         );
@@ -594,6 +597,7 @@ fn try_buy(
     wallet: &mut Wallet,
     inventory: &mut Inventory,
     flash: &mut SpendFlash,
+    deck: &Deck,
     commands: &mut Commands,
     buy_entity: Entity,
 ) {
@@ -621,7 +625,7 @@ fn try_buy(
     commands.entity(buy_entity).insert(PurchasePulse {
         remaining: FLASH_SECS,
     });
-    crate::items::save::save_inventory(inventory, wallet);
+    crate::items::save::save_inventory(inventory, wallet, deck);
 }
 
 pub(crate) fn update_shop_visuals(

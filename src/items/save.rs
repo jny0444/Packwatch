@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::items::{Inventory, wallet::Wallet};
+use crate::items::{Deck, Inventory, wallet::Wallet};
 
 const SAVE_VERSION: u32 = 1;
 const SAVE_PATH: &str = "saves/slot1.json";
@@ -14,18 +14,22 @@ struct SaveFile {
     inventory: Inventory,
     #[serde(default)]
     amount: u32,
+    #[serde(default)]
+    deck: Deck,
 }
 
 pub struct LoadedSave {
     pub inventory: Inventory,
     pub wallet: Wallet,
+    pub deck: Deck,
 }
 
-pub fn save_inventory(inventory: &Inventory, wallet: &Wallet) {
+pub fn save_inventory(inventory: &Inventory, wallet: &Wallet, deck: &Deck) {
     let save = SaveFile {
         version: SAVE_VERSION,
         inventory: inventory.clone(),
         amount: wallet.balance,
+        deck: deck.clone(),
     };
     let Ok(json) = serde_json::to_string_pretty(&save) else {
         error!("failed to serialize save");
@@ -41,11 +45,14 @@ pub fn save_inventory(inventory: &Inventory, wallet: &Wallet) {
 }
 
 pub fn load_save() -> LoadedSave {
+    let empty = || LoadedSave {
+        inventory: Inventory::new(),
+        wallet: Wallet::new(),
+        deck: Deck::new(),
+    };
+
     let Ok(bytes) = fs::read(Path::new(SAVE_PATH)) else {
-        return LoadedSave {
-            inventory: Inventory::new(),
-            wallet: Wallet::new(),
-        };
+        return empty();
     };
 
     match serde_json::from_slice::<SaveFile>(&bytes) {
@@ -54,10 +61,8 @@ pub fn load_save() -> LoadedSave {
             wallet: Wallet {
                 balance: save.amount,
             },
+            deck: save.deck,
         },
-        _ => LoadedSave {
-            inventory: Inventory::new(),
-            wallet: Wallet::new(),
-        },
+        _ => empty(),
     }
 }
