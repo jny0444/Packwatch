@@ -29,8 +29,9 @@ use crate::{
         hud::{spawn_wallet_hud, update_wallet_hud},
         save::{load_save, save_inventory},
         shop::{
-            ShopUi, SpendFlash, animate_purchase, drag_preview, rotate_preview, shop_interact,
-            spawn_shop_page, sync_preview_layers, sync_shop_preview, update_shop_visuals,
+            ShopUi, SpendFlash, animate_purchase, apply_preview_uv, drag_preview, rotate_preview,
+            shop_interact, spawn_shop_page, sync_preview_layers, sync_shop_preview,
+            update_shop_visuals,
         },
         wallet::Wallet,
     },
@@ -48,6 +49,7 @@ impl Plugin for ItemsPlugin {
             .init_resource::<ShopUi>()
             .init_resource::<BagUi>()
             .init_resource::<DeckUi>()
+            .add_observer(apply_preview_uv)
             .add_systems(
                 OnEnter(GameState::Playing),
                 (

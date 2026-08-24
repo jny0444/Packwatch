@@ -1,12 +1,14 @@
-use std::f32::consts::FRAC_PI_2;
+use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{
     asset::RenderAssetUsages,
     camera::{RenderTarget, visibility::RenderLayers},
-    input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
+    input::mouse::MouseMotion,
+    math::Affine2,
     prelude::*,
     render::render_resource::{TextureDimension, TextureFormat, TextureUsages},
     ui::widget::ViewportNode,
+    world_serialization::WorldInstanceReady,
 };
 
 use crate::{
@@ -43,17 +45,13 @@ const fn listing(kind: ItemKind, price: u32) -> ShopListing {
 
 pub const KIOSK_STOCK: &[ShopListing] = &[
     listing(ItemKind::Lighter, 10),
-    listing(ItemKind::Cig(CigTypes::MarlboroRed), 25),
     listing(ItemKind::Cig(CigTypes::MarlboroGold), 25),
-    listing(ItemKind::Cig(CigTypes::MarlboroCompact), 15),
-    listing(ItemKind::Cig(CigTypes::MarlboroAdvance), 20),
     listing(ItemKind::Cig(CigTypes::DoubleHappiness11mg), 30),
-    listing(ItemKind::Cig(CigTypes::DoubleHappiness6mg), 28),
+    listing(ItemKind::Cig(CigTypes::StellarDoubleShift), 22),
     listing(ItemKind::Cig(CigTypes::ClassicIndieMint), 15),
-    listing(ItemKind::Cig(CigTypes::ClassicConnect), 14),
     listing(ItemKind::Cig(CigTypes::CamelYellow), 28),
-    listing(ItemKind::Cig(CigTypes::CamelBlue), 25),
-    listing(ItemKind::Cig(CigTypes::CamelConnect), 30),
+    listing(ItemKind::Cig(CigTypes::Cashtri), 12),
+    listing(ItemKind::Cig(CigTypes::Mond), 18),
     listing(ItemKind::Beer(BeerTypes::BudweiserMagnum), 40),
     listing(ItemKind::Beer(BeerTypes::KingfisherStrong), 40),
     listing(ItemKind::Beer(BeerTypes::Corona), 40),
@@ -113,10 +111,23 @@ pub(crate) struct ShopPreviewViewport;
 #[derive(Component)]
 pub(crate) struct ShopPreviewModel(ItemKind);
 
+#[derive(Component)]
+pub(crate) struct ShopDropdownToggle;
+
+#[derive(Component)]
+pub(crate) struct ShopDropdownLabel;
+
+#[derive(Component)]
+pub(crate) struct ShopDropdownChevron;
+
+#[derive(Component)]
+pub(crate) struct ShopDropdownMenu;
+
 #[derive(Resource)]
 pub(crate) struct ShopUi {
     selected: usize,
     qty: u32,
+    dropdown_open: bool,
 }
 
 #[derive(Resource, Default)]
@@ -130,6 +141,7 @@ impl Default for ShopUi {
         Self {
             selected: 0,
             qty: 1,
+            dropdown_open: false,
         }
     }
 }
@@ -154,6 +166,17 @@ fn preview_transform(kind: ItemKind) -> Transform {
     // `center` cancels out a glTF origin that sits away from the mesh, so it has
     // to be rotated alongside the model to keep the mesh on the stage pivot.
     let (scale, center, rotation) = match kind {
+        // Blender packs are ~22×6×34 and already centered. The old cig pose
+        // scaled the tiny Sketchfab pack by 10.5, which put the camera inside
+        // these. Stand the pack up (X 90°) and pull back with a 3/4 yaw.
+        ItemKind::Cig(CigTypes::Cashtri) => {
+            (0.24, Vec3::ZERO, Quat::from_rotation_y(-0.55))
+        }
+        ItemKind::Cig(_) if kind.resolved_model().starts_with("customASSets/") => (
+            0.03,
+            Vec3::ZERO,
+            Quat::from_rotation_y(-0.5) * Quat::from_rotation_x(FRAC_PI_2),
+        ),
         ItemKind::Cig(_) => (
             10.5,
             Vec3::new(1.14, -6.22, -1.22),
@@ -266,6 +289,49 @@ fn spawn_preview_model(
     ));
 }
 
+fn preview_uv_angle(kind: ItemKind) -> Option<f32> {
+    if matches!(kind, ItemKind::Cig(CigTypes::Cashtri)) {
+        return None;
+    }
+    kind.resolved_model()
+        .starts_with("customASSets/")
+        .then_some(FRAC_PI_2 + PI)
+}
+
+fn uv_rotate(angle: f32) -> Affine2 {
+    Affine2::from_translation(Vec2::splat(0.5))
+        * Affine2::from_angle_translation(angle, Vec2::ZERO)
+        * Affine2::from_translation(Vec2::splat(-0.5))
+}
+
+pub(crate) fn apply_preview_uv(
+    ready: On<WorldInstanceReady>,
+    preview: Query<&ShopPreviewModel>,
+    children: Query<&Children>,
+    mesh_materials: Query<&MeshMaterial3d<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Ok(model) = preview.get(ready.entity) else {
+        return;
+    };
+    if !model.0.resolved_model().starts_with("customASSets/") {
+        return;
+    }
+    let uv = preview_uv_angle(model.0)
+        .map(uv_rotate)
+        .unwrap_or(Affine2::IDENTITY);
+
+    for entity in children.iter_descendants(ready.entity) {
+        let Ok(handle) = mesh_materials.get(entity) else {
+            continue;
+        };
+        let Some(mut material) = materials.get_mut(handle.id()) else {
+            continue;
+        };
+        material.uv_transform = uv;
+    }
+}
+
 fn spawn_shop_ui(commands: &mut Commands, camera: Entity) {
     commands
         .spawn((
@@ -284,13 +350,13 @@ fn spawn_shop_ui(commands: &mut Commands, camera: Entity) {
             root.spawn((
                 Node {
                     flex_direction: FlexDirection::Row,
-                    column_gap: px(20),
-                    width: px(920),
-                    height: percent(82),
-                    padding: UiRect::all(px(20)),
+                    column_gap: px(24),
+                    width: px(860),
+                    height: percent(78),
+                    padding: UiRect::all(px(24)),
                     ..default()
                 },
-                BackgroundColor(Color::srgb(0.12, 0.12, 0.14)),
+                BackgroundColor(Color::srgb(0.09, 0.09, 0.1)),
             ))
             .with_children(|panel| {
                 spawn_item_list(panel);
@@ -303,8 +369,8 @@ fn spawn_item_list(panel: &mut ChildSpawnerCommands) {
     panel
         .spawn((Node {
             flex_direction: FlexDirection::Column,
-            row_gap: px(12),
-            width: px(340),
+            row_gap: px(16),
+            width: px(280),
             height: percent(100),
             ..default()
         },))
@@ -312,24 +378,88 @@ fn spawn_item_list(panel: &mut ChildSpawnerCommands) {
             left.spawn((
                 Text::new("Shop"),
                 TextFont {
-                    font_size: FontSize::Px(28.0),
+                    font_size: FontSize::Px(26.0),
                     ..default()
                 },
                 TextColor(Color::WHITE),
             ));
             left.spawn((
-                ShopList,
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: px(ROW_GAP),
-                    width: percent(100),
-                    flex_grow: 1.0,
-                    min_height: px(0),
-                    padding: UiRect::bottom(px(ROW_GAP)),
-                    overflow: Overflow::scroll_y(),
+                Text::new("Stock"),
+                TextFont {
+                    font_size: FontSize::Px(13.0),
                     ..default()
                 },
+                TextColor(Color::srgb(0.55, 0.55, 0.58)),
+            ));
+            spawn_dropdown(left);
+        });
+}
+
+fn spawn_dropdown(parent: &mut ChildSpawnerCommands) {
+    parent
+        .spawn((Node {
+            flex_direction: FlexDirection::Column,
+            width: percent(100),
+            ..default()
+        },))
+        .with_children(|wrap| {
+            wrap.spawn((
+                Button,
+                ShopDropdownToggle,
+                Node {
+                    width: percent(100),
+                    padding: UiRect::axes(px(14), px(12)),
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    column_gap: px(8),
+                    border: UiRect::all(px(1)),
+                    ..default()
+                },
+                BackgroundColor(BUTTON_IDLE),
+                BorderColor::all(Color::srgb(0.28, 0.28, 0.3)),
+            ))
+            .with_children(|toggle| {
+                toggle.spawn((
+                    ShopDropdownLabel,
+                    Text::new(""),
+                    TextFont {
+                        font_size: FontSize::Px(16.0),
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                ));
+                toggle.spawn((
+                    ShopDropdownChevron,
+                    Text::new("▾"),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
+                        ..default()
+                    },
+                    TextColor(Color::srgb(0.7, 0.7, 0.72)),
+                ));
+            });
+
+            wrap.spawn((
+                ShopList,
+                ShopDropdownMenu,
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: px(48),
+                    left: px(0),
+                    width: percent(100),
+                    max_height: px(320),
+                    flex_direction: FlexDirection::Column,
+                    row_gap: px(ROW_GAP),
+                    padding: UiRect::all(px(6)),
+                    overflow: Overflow::scroll_y(),
+                    border: UiRect::all(px(1)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgb(0.14, 0.14, 0.16)),
+                BorderColor::all(Color::srgb(0.28, 0.28, 0.3)),
+                GlobalZIndex(40),
                 ScrollPosition::default(),
+                Visibility::Hidden,
             ))
             .with_children(|list| {
                 for (index, listing) in KIOSK_STOCK.iter().enumerate() {
@@ -338,7 +468,7 @@ fn spawn_item_list(panel: &mut ChildSpawnerCommands) {
                         ShopRow { index },
                         Node {
                             width: percent(100),
-                            padding: UiRect::all(px(12)),
+                            padding: UiRect::axes(px(12), px(10)),
                             flex_shrink: 0.0,
                             ..default()
                         },
@@ -348,7 +478,7 @@ fn spawn_item_list(panel: &mut ChildSpawnerCommands) {
                         row.spawn((
                             Text::new(format!("{}  ${}", listing.kind.def().name, listing.price)),
                             TextFont {
-                                font_size: FontSize::Px(16.0),
+                                font_size: FontSize::Px(15.0),
                                 ..default()
                             },
                             TextColor(Color::WHITE),
@@ -372,7 +502,7 @@ fn spawn_detail_pane(panel: &mut ChildSpawnerCommands, camera: Entity) {
             right.spawn((
                 Node {
                     width: percent(100),
-                    height: px(260),
+                    height: px(300),
                     border: UiRect::all(px(1)),
                     ..default()
                 },
@@ -496,11 +626,11 @@ fn spawn_qty_button(parent: &mut ChildSpawnerCommands, kind: ShopQtyButton, labe
 pub(crate) fn shop_interact(
     shop: Query<&Visibility, With<ShopPage>>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut wheel: MessageReader<MouseWheel>,
     rows: Query<(&Interaction, &ShopRow), Changed<Interaction>>,
     qty_buttons: Query<(&Interaction, &ShopQtyButton), Changed<Interaction>>,
     buy_buttons: Query<(Entity, &Interaction), (Changed<Interaction>, With<ShopBuyConfirm>)>,
     buy_entities: Query<Entity, With<ShopBuyConfirm>>,
+    toggle: Query<&Interaction, (Changed<Interaction>, With<ShopDropdownToggle>)>,
     mut ui: ResMut<ShopUi>,
     mut wallet: ResMut<Wallet>,
     mut inventory: ResMut<Inventory>,
@@ -509,6 +639,7 @@ pub(crate) fn shop_interact(
     mut commands: Commands,
 ) {
     if !shop_visible(&shop) {
+        ui.dropdown_open = false;
         return;
     }
 
@@ -528,17 +659,9 @@ pub(crate) fn shop_interact(
         ui.qty = ui.qty.saturating_sub(1).max(1);
     }
 
-    for event in wheel.read() {
-        let dy = match event.unit {
-            MouseScrollUnit::Line => event.y,
-            MouseScrollUnit::Pixel => event.y.signum(),
-        };
-        if dy > 0.0 {
-            ui.selected = (ui.selected + count - 1) % count;
-            ui.clamp_qty(&inventory);
-        } else if dy < 0.0 {
-            ui.selected = (ui.selected + 1) % count;
-            ui.clamp_qty(&inventory);
+    for interaction in &toggle {
+        if *interaction == Interaction::Pressed {
+            ui.dropdown_open = !ui.dropdown_open;
         }
     }
 
@@ -546,6 +669,7 @@ pub(crate) fn shop_interact(
         if *interaction == Interaction::Pressed {
             ui.selected = row.index;
             ui.clamp_qty(&inventory);
+            ui.dropdown_open = false;
         }
     }
 
@@ -634,8 +758,27 @@ pub(crate) fn update_shop_visuals(
     inventory: Res<Inventory>,
     mut rows: Query<(&ShopRow, &mut BackgroundColor, &ComputedNode), Without<ShopBuyConfirm>>,
     mut fields: Query<(&ShopField, &mut Text)>,
+    mut labels: Query<&mut Text, (With<ShopDropdownLabel>, Without<ShopField>)>,
+    mut chevrons: Query<
+        &mut Text,
+        (
+            With<ShopDropdownChevron>,
+            Without<ShopField>,
+            Without<ShopDropdownLabel>,
+        ),
+    >,
+    mut menus: Query<&mut Visibility, (With<ShopDropdownMenu>, Without<ShopPage>)>,
     mut lists: Query<(&mut ScrollPosition, &ComputedNode), With<ShopList>>,
     mut buy: Query<&mut BackgroundColor, (With<ShopBuyConfirm>, Without<PurchasePulse>)>,
+    mut toggles: Query<
+        &mut BackgroundColor,
+        (
+            With<ShopDropdownToggle>,
+            Without<ShopBuyConfirm>,
+            Without<ShopRow>,
+            Without<PurchasePulse>,
+        ),
+    >,
 ) {
     if !shop_visible(&shop) {
         return;
@@ -644,6 +787,20 @@ pub(crate) fn update_shop_visuals(
     let listing = ui.listing();
     let def = listing.kind.def();
     let total = listing.price.saturating_mul(ui.qty);
+
+    if let Ok(mut label) = labels.single_mut() {
+        **label = format!("{}  ${}", def.name, listing.price);
+    }
+    if let Ok(mut chevron) = chevrons.single_mut() {
+        **chevron = if ui.dropdown_open { "▴" } else { "▾" }.into();
+    }
+    if let Ok(mut menu) = menus.single_mut() {
+        *menu = if ui.dropdown_open {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    }
 
     let mut row_top = 0.0;
     let mut row_height = 0.0;
@@ -670,6 +827,14 @@ pub(crate) fn update_shop_visuals(
         };
     }
 
+    if let Ok(mut color) = toggles.single_mut() {
+        *color = BackgroundColor(if ui.dropdown_open {
+            BUTTON_SELECTED
+        } else {
+            BUTTON_IDLE
+        });
+    }
+
     if let Ok(mut color) = buy.single_mut() {
         *color = BackgroundColor(if inventory.can_add(listing.kind, ui.qty) {
             BUY_IDLE
@@ -678,7 +843,7 @@ pub(crate) fn update_shop_visuals(
         });
     }
 
-    if let Ok((mut scroll, node)) = lists.single_mut() {
+    if ui.dropdown_open && let Ok((mut scroll, node)) = lists.single_mut() {
         let view = node.size().y * node.inverse_scale_factor();
         let content = node.content_size().y * node.inverse_scale_factor();
         let max_scroll = (content - view).max(0.0);

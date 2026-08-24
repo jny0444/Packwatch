@@ -17,6 +17,8 @@ pub enum CigTypes {
     CamelBlue,
     CamelConnect,
     Bidi,
+    Cashtri,
+    Mond,
 }
 
 impl CigTypes {
@@ -32,7 +34,7 @@ impl CigTypes {
                 2,
                 4,
             ),
-            CigTypes::MarlboroGold => ("Marlboro Gold", "Lights. Still adds up.", 4.0, 9.0, 1, 4),
+            CigTypes::MarlboroGold => ("Malboro Gold", "Lights. Still adds up.", 4.0, 9.0, 1, 4),
             CigTypes::MarlboroCompact => (
                 "Marlboro Compact",
                 "Short stick. Medium hit.",
@@ -50,7 +52,7 @@ impl CigTypes {
                 4,
             ),
             CigTypes::DoubleHappiness11mg => (
-                "Double Happiness 11mg",
+                "Double Happiness",
                 "Strong. Sit down after.",
                 9.0,
                 20.0,
@@ -66,7 +68,7 @@ impl CigTypes {
                 4,
             ),
             CigTypes::ClassicIndieMint => (
-                "Classic Indie Mint",
+                "Indiemint",
                 "Menthol. Cold smoke, spinning later.",
                 6.0,
                 13.0,
@@ -82,17 +84,19 @@ impl CigTypes {
                 4,
             ),
             CigTypes::StellarDoubleShift => (
-                "Stellar Double Shift",
+                "Doubleshift",
                 "Double the fun, double the menthol",
                 5.0,
                 11.0,
                 1,
                 4,
             ),
-            CigTypes::CamelYellow => ("Camel Yellow", "Heavy. Thick smoke.", 7.0, 16.0, 2, 4),
+            CigTypes::CamelYellow => ("Camel", "Heavy. Thick smoke.", 7.0, 16.0, 2, 4),
             CigTypes::CamelBlue => ("Camel Blue", "Milder camel. Slow burn.", 4.0, 10.0, 1, 4),
             CigTypes::CamelConnect => ("Camel Connect", "Short pack smoke.", 5.0, 11.0, 1, 4),
             CigTypes::Bidi => ("Bidi", "Leaf wrap. Burns fast, hits hard.", 6.0, 14.0, 1, 3),
+            CigTypes::Cashtri => ("Kingfisher", "me toh lab rep hun.", 5.0, 12.0, 1, 4),
+            CigTypes::Mond => ("Mond", "SAY A SIII", 6.0, 14.0, 1, 4),
         };
 
         ItemDef::item(
@@ -106,18 +110,21 @@ impl CigTypes {
     pub fn model(self) -> &'static str {
         match self {
             CigTypes::MarlboroRed => "models/items/cigs/marlboro_red.glb",
-            CigTypes::MarlboroGold => "models/items/cigs/marlboro_gold.glb",
+            CigTypes::MarlboroGold => "customASSets/Malboro Gold.glb",
             CigTypes::MarlboroCompact => "models/items/cigs/marlboro_compact.glb",
             CigTypes::MarlboroAdvance => "models/items/cigs/marlboro_advance.glb",
-            CigTypes::DoubleHappiness11mg => "models/items/cigs/double_happiness_11mg.glb",
-            CigTypes::DoubleHappiness6mg => "models/items/cigs/double_happiness_6mg.glb",
-            CigTypes::ClassicIndieMint => "models/items/cigs/classic_indie_mint.glb",
+            CigTypes::DoubleHappiness11mg | CigTypes::DoubleHappiness6mg => {
+                "customASSets/Double Happiness.glb"
+            }
+            CigTypes::ClassicIndieMint => "customASSets/Indiemint (1).glb",
             CigTypes::ClassicConnect => "models/items/cigs/classic_connect.glb",
-            CigTypes::StellarDoubleShift => "models/items/cigs/stellar_double_shift.glb",
-            CigTypes::CamelYellow => "models/items/cigs/camel_yellow.glb",
-            CigTypes::CamelBlue => "models/items/cigs/camel_blue.glb",
-            CigTypes::CamelConnect => "models/items/cigs/camel_connect.glb",
+            CigTypes::StellarDoubleShift => "customASSets/Doubleshift (1).glb",
+            CigTypes::CamelYellow | CigTypes::CamelBlue | CigTypes::CamelConnect => {
+                "customASSets/Camel (1).glb"
+            }
             CigTypes::Bidi => "models/items/cigs/bidi.glb",
+            CigTypes::Cashtri => "customASSets/Cashtri Model.glb",
+            CigTypes::Mond => "customASSets/mond.glb",
         }
     }
 }
