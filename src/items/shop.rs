@@ -100,10 +100,7 @@ pub(crate) struct PurchasePulse {
 pub(crate) struct ShopPreviewCamera;
 
 #[derive(Component)]
-pub(crate) struct ShopPreviewStage {
-    /// Cleared once the player grabs the model, so their angle survives.
-    auto_spin: bool,
-}
+pub(crate) struct ShopPreviewStage;
 
 #[derive(Component)]
 pub(crate) struct ShopPreviewViewport;
@@ -245,7 +242,7 @@ fn spawn_preview_world(
 
     commands
         .spawn((
-            ShopPreviewStage { auto_spin: true },
+            ShopPreviewStage,
             DespawnOnExit(GameState::Playing),
             Transform::from_translation(PREVIEW_POS),
             Visibility::Visible,
@@ -863,7 +860,7 @@ pub(crate) fn sync_shop_preview(
     asset_server: Res<AssetServer>,
     mut cameras: Query<&mut Camera, With<ShopPreviewCamera>>,
     mut preview: Query<(&mut ShopPreviewModel, &mut Transform, &mut WorldAssetRoot)>,
-    mut stages: Query<(&mut Transform, &mut ShopPreviewStage), Without<ShopPreviewModel>>,
+    mut stages: Query<&mut Transform, (With<ShopPreviewStage>, Without<ShopPreviewModel>)>,
 ) {
     let open = shop_visible(&shop);
     if let Ok(mut camera) = cameras.single_mut() {
@@ -885,9 +882,8 @@ pub(crate) fn sync_shop_preview(
     *transform = preview_transform(kind);
 
     // A new item shouldn't inherit the angle the player dragged the last one to.
-    for (mut stage_transform, mut stage) in &mut stages {
+    for mut stage_transform in &mut stages {
         stage_transform.rotation = Quat::IDENTITY;
-        stage.auto_spin = true;
     }
 
     let next = preview_root(&asset_server, kind);
@@ -902,7 +898,7 @@ pub(crate) fn drag_preview(
     shop: Query<&Visibility, With<ShopPage>>,
     viewport: Query<&Interaction, With<ShopPreviewViewport>>,
     mut motion: MessageReader<MouseMotion>,
-    mut stages: Query<(&mut Transform, &mut ShopPreviewStage)>,
+    mut stages: Query<&mut Transform, With<ShopPreviewStage>>,
 ) {
     let dragging = shop_visible(&shop)
         && viewport
@@ -915,14 +911,11 @@ pub(crate) fn drag_preview(
     }
 
     let delta: Vec2 = motion.read().map(|motion| motion.delta).sum();
+    if delta == Vec2::ZERO {
+        return;
+    }
 
-    for (mut transform, mut stage) in &mut stages {
-        if stage.auto_spin {
-            stage.auto_spin = false;
-        }
-        if delta == Vec2::ZERO {
-            continue;
-        }
+    for mut transform in &mut stages {
         transform.rotate_y(delta.x * PREVIEW_DRAG_SPEED);
         transform.rotate_x(delta.y * PREVIEW_DRAG_SPEED);
     }
@@ -930,16 +923,20 @@ pub(crate) fn drag_preview(
 
 pub(crate) fn rotate_preview(
     shop: Query<&Visibility, With<ShopPage>>,
+    viewport: Query<&Interaction, With<ShopPreviewViewport>>,
     time: Res<Time>,
-    mut stages: Query<(&mut Transform, &ShopPreviewStage)>,
+    mut stages: Query<&mut Transform, With<ShopPreviewStage>>,
 ) {
     if !shop_visible(&shop) {
         return;
     }
-    for (mut transform, stage) in &mut stages {
-        if !stage.auto_spin {
-            continue;
-        }
+    let dragging = viewport
+        .single()
+        .is_ok_and(|interaction| *interaction == Interaction::Pressed);
+    if dragging {
+        return;
+    }
+    for mut transform in &mut stages {
         transform.rotate_y(time.delta_secs() * PREVIEW_SPIN_SPEED);
     }
 }
