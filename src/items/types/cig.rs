@@ -19,31 +19,77 @@ pub enum CigTypes {
 
 impl CigTypes {
     pub fn def(self) -> ItemDef {
-        let (name, description, dizziness_delta) = match self {
-            CigTypes::MarlboroRed => ("Marlboro Red", "Full flavor. Hits the head fast.", 18.0),
-            CigTypes::MarlboroGold => ("Marlboro Gold", "Lights. Still adds up.", 9.0),
-            CigTypes::MarlboroCompact => ("Marlboro Compact", "Short stick. Medium hit.", 12.0),
-            CigTypes::MarlboroAdvance => {
-                ("Marlboro Advance", "Smoother smoke. Mild dizziness.", 10.0)
-            }
-            CigTypes::DoubleHappiness11mg => {
-                ("Double Happiness 11mg", "Strong. Sit down after.", 20.0)
-            }
-            CigTypes::DoubleHappiness6mg => {
-                ("Double Happiness 6mg", "Lighter stick. Creeps in.", 8.0)
-            }
+        use crate::items::item_def::ItemStats;
+
+        let (name, description, player, enemy, ap_costs, puffs) = match self {
+            CigTypes::MarlboroRed => (
+                "Marlboro Red",
+                "Full flavor. Hits the head fast.",
+                8.0,
+                18.0,
+                2,
+                4,
+            ),
+            CigTypes::MarlboroGold => ("Marlboro Gold", "Lights. Still adds up.", 4.0, 9.0, 1, 4),
+            CigTypes::MarlboroCompact => (
+                "Marlboro Compact",
+                "Short stick. Medium hit.",
+                5.0,
+                12.0,
+                1,
+                4,
+            ),
+            CigTypes::MarlboroAdvance => (
+                "Marlboro Advance",
+                "Smoother smoke. Mild dizziness.",
+                4.0,
+                10.0,
+                1,
+                4,
+            ),
+            CigTypes::DoubleHappiness11mg => (
+                "Double Happiness 11mg",
+                "Strong. Sit down after.",
+                9.0,
+                20.0,
+                2,
+                4,
+            ),
+            CigTypes::DoubleHappiness6mg => (
+                "Double Happiness 6mg",
+                "Lighter stick. Creeps in.",
+                3.0,
+                8.0,
+                1,
+                4,
+            ),
             CigTypes::ClassicIndieMint => (
                 "Classic Indie Mint",
                 "Menthol. Cold smoke, spinning later.",
+                6.0,
                 13.0,
+                1,
+                4,
             ),
-            CigTypes::ClassicConnect => ("Classic Connect", "Compact. Everyday smoke.", 11.0),
-            CigTypes::CamelYellow => ("Camel Yellow", "Heavy. Thick smoke.", 16.0),
-            CigTypes::CamelBlue => ("Camel Blue", "Milder camel. Slow burn.", 10.0),
-            CigTypes::CamelConnect => ("Camel Connect", "Short pack smoke.", 11.0),
+            CigTypes::ClassicConnect => (
+                "Classic Connect",
+                "Compact. Everyday smoke.",
+                5.0,
+                11.0,
+                1,
+                4,
+            ),
+            CigTypes::CamelYellow => ("Camel Yellow", "Heavy. Thick smoke.", 7.0, 16.0, 2, 4),
+            CigTypes::CamelBlue => ("Camel Blue", "Milder camel. Slow burn.", 4.0, 10.0, 1, 4),
+            CigTypes::CamelConnect => ("Camel Connect", "Short pack smoke.", 5.0, 11.0, 1, 4),
         };
 
-        ItemDef::item(name, description, dizziness_delta, true)
+        ItemDef::item(
+            name,
+            description,
+            ItemStats::cig(player, enemy, ap_costs, puffs),
+            true,
+        )
     }
 
     pub fn model(self) -> &'static str {

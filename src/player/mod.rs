@@ -2,7 +2,7 @@ mod components;
 mod movement;
 mod spawn;
 
-pub use components::Player;
+pub use components::{Player, PlayerStats};
 pub use spawn::spawn_player;
 
 use bevy::prelude::*;

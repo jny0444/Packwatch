@@ -2,7 +2,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::camera::CameraController;
-use crate::player::Player;
+use crate::player::{Player, PlayerStats};
 use crate::screens::GameState;
 
 const CAPSULE_RADIUS: f32 = 0.4;
@@ -12,6 +12,10 @@ const EYE_HEIGHT: f32 = 0.85;
 pub fn spawn_player(commands: &mut Commands, position: Vec3) {
     commands.spawn((
         Player,
+        PlayerStats {
+            dizziness: 0.0,
+            dizziness_limit: 100.0,
+        },
         DespawnOnExit(GameState::Playing),
         Transform::from_translation(position),
         RigidBody::Dynamic,

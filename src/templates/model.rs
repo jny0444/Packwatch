@@ -133,7 +133,7 @@ pub fn spawn_scene_model(
     commands: &mut Commands,
     asset_server: &AssetServer,
     template: SceneModelTemplate,
-) {
+) -> Entity {
     let mut model = commands.spawn((
         DespawnOnExit(GameState::Playing),
         FixGltfAlpha,
@@ -162,4 +162,6 @@ pub fn spawn_scene_model(
             },
         ));
     }
+
+    model.id()
 }

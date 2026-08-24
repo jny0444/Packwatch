@@ -13,23 +13,23 @@ pub mod wallet;
 
 pub use bag::InventoryPage;
 pub use inventory::{Inventory, Stack};
-pub use item_def::ItemDef;
+pub use item_def::{ItemDef, ItemStats};
 pub use item_kind::ItemKind;
 pub use pocket::Pocket;
 pub use shop::ShopPage;
 
 use crate::{
     items::{
-        bag::{bag_interact, spawn_bag_page, update_bag_visuals, BagUi},
+        bag::{BagUi, bag_interact, spawn_bag_page, update_bag_visuals},
         hud::{spawn_wallet_hud, update_wallet_hud},
         save::{load_save, save_inventory},
         shop::{
-            ShopUi, SpendFlash, animate_purchase, rotate_preview, shop_interact, spawn_shop_page,
-            sync_preview_layers, sync_shop_preview, update_shop_visuals,
+            ShopUi, SpendFlash, animate_purchase, drag_preview, rotate_preview, shop_interact,
+            spawn_shop_page, sync_preview_layers, sync_shop_preview, update_shop_visuals,
         },
         wallet::Wallet,
     },
-    screens::GameState,
+    screens::{GameState, PlayMode},
 };
 
 pub struct ItemsPlugin;
@@ -54,17 +54,22 @@ impl Plugin for ItemsPlugin {
                 Update,
                 (
                     update_wallet_hud,
-                    shop_interact,
-                    bag_interact,
                     update_bag_visuals,
                     update_shop_visuals,
                     sync_shop_preview,
+                    drag_preview,
                     rotate_preview,
                     sync_preview_layers,
                     animate_purchase,
                 )
                     .chain()
                     .run_if(in_state(GameState::Playing)),
+            )
+            .add_systems(
+                Update,
+                (shop_interact, bag_interact)
+                    .chain()
+                    .run_if(in_state(PlayMode::Exploring)),
             )
             .add_systems(OnExit(GameState::Playing), save_from_world)
             .add_systems(Last, save_on_quit);

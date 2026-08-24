@@ -266,9 +266,30 @@ pub(crate) fn bag_interact(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut open: ResMut<OpenInspection>,
     mut ui: ResMut<BagUi>,
-    shop: Query<&Visibility, (With<ShopPage>, Without<InspectionPage>, Without<InventoryPage>)>,
-    inspect: Query<&Visibility, (With<InspectionPage>, Without<ShopPage>, Without<InventoryPage>)>,
-    mut bag: Query<&mut Visibility, (With<InventoryPage>, Without<ShopPage>, Without<InspectionPage>)>,
+    shop: Query<
+        &Visibility,
+        (
+            With<ShopPage>,
+            Without<InspectionPage>,
+            Without<InventoryPage>,
+        ),
+    >,
+    inspect: Query<
+        &Visibility,
+        (
+            With<InspectionPage>,
+            Without<ShopPage>,
+            Without<InventoryPage>,
+        ),
+    >,
+    mut bag: Query<
+        &mut Visibility,
+        (
+            With<InventoryPage>,
+            Without<ShopPage>,
+            Without<InspectionPage>,
+        ),
+    >,
     tabs: Query<(&Interaction, &BagTab), Changed<Interaction>>,
     slots: Query<(&Interaction, &BagSlot), Changed<Interaction>>,
     mut cursor_options: Single<&mut CursorOptions>,
@@ -358,15 +379,18 @@ pub(crate) fn update_bag_visuals(
     }
 
     for (slot, children, mut color) in &mut slots {
-        *color = BackgroundColor(
-            if slot.pocket == ui.pocket && slot.index == ui.selected {
-                BUTTON_SELECTED
-            } else {
-                BUTTON_IDLE
-            },
-        );
+        *color = BackgroundColor(if slot.pocket == ui.pocket && slot.index == ui.selected {
+            BUTTON_SELECTED
+        } else {
+            BUTTON_IDLE
+        });
 
-        let label = match inventory.slots(slot.pocket).get(slot.index).copied().flatten() {
+        let label = match inventory
+            .slots(slot.pocket)
+            .get(slot.index)
+            .copied()
+            .flatten()
+        {
             Some(stack) if stack.count > 1 => {
                 format!("{}\n×{}", stack.kind.def().name, stack.count)
             }

@@ -12,14 +12,23 @@ pub enum BeerTypes {
 
 impl BeerTypes {
     pub fn def(self) -> ItemDef {
-        let (name, description, dizziness_delta) = match self {
-            BeerTypes::BudweiserMagnum => ("Budweiser Magnum", "A short strong bottle.", 18.0),
-            BeerTypes::KingfisherStrong => ("Kingfisher Strong", "Hits harder than ultra.", 16.0),
-            BeerTypes::Corona => ("Corona", "Small bottle. Easy to underestimate.", 10.0),
-            BeerTypes::Guinness => ("Guinness", "Thick. Slow dizziness.", 13.0),
+        use crate::items::item_def::ItemStats;
+
+        let (name, description, sp_attack, ap_costs) = match self {
+            BeerTypes::BudweiserMagnum => ("Budweiser Magnum", "A short strong bottle.", 28.0, 3),
+            BeerTypes::KingfisherStrong => {
+                ("Kingfisher Strong", "Hits harder than ultra.", 24.0, 2)
+            }
+            BeerTypes::Corona => ("Corona", "Small bottle. Easy to underestimate.", 16.0, 2),
+            BeerTypes::Guinness => ("Guinness", "Thick. Slow dizziness.", 20.0, 2),
         };
 
-        ItemDef::item(name, description, dizziness_delta, false)
+        ItemDef::item(
+            name,
+            description,
+            ItemStats::beer(sp_attack, ap_costs),
+            false,
+        )
     }
 
     pub fn model(self) -> &'static str {

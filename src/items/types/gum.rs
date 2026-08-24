@@ -10,7 +10,9 @@ pub enum GumTypes {
 
 impl GumTypes {
     pub fn def(self) -> ItemDef {
-        let (name, description, dizziness_delta) = match self {
+        use crate::items::item_def::ItemStats;
+
+        let (name, description, player_dizziness) = match self {
             GumTypes::MintStrongGum => (
                 "Mint Strong Gum",
                 "Cuts dizziness more than light gum.",
@@ -19,7 +21,7 @@ impl GumTypes {
             GumTypes::LightGum => ("Light Gum", "Takes the edge off.", -10.0),
         };
 
-        ItemDef::item(name, description, dizziness_delta, false)
+        ItemDef::item(name, description, ItemStats::gum(player_dizziness), false)
     }
 
     pub fn model(self) -> &'static str {

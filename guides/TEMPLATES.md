@@ -21,13 +21,8 @@ pub enum NpcKind {
 ```rust
 NpcKind::NewCharacter => NpcStats {
     name: "New Character".into(),
-    speed: 1.0,
-    sp_speed: 1.0,
     attack: 1.0,
     sp_attack: 1.0,
-    defence: 1.0,
-    sp_defence: 1.0,
-    capacity: 1.0,
     dizziness: 0.0,
 },
 ```

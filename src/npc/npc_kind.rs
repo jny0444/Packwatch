@@ -24,14 +24,10 @@ impl NpcKind {
         match self {
             NpcKind::Guide => NpcStats {
                 name: self.display_name().into(),
-                speed: 100.0,
-                sp_speed: 100.0,
-                attack: 100.0,
-                sp_attack: 100.0,
-                defence: 100.0,
-                sp_defence: 100.0,
-                capacity: 100.0,
+                attack: 15.0,
+                sp_attack: 20.0,
                 dizziness: 0.0,
+                dizziness_limit: 80.0,
             },
             NpcKind::LightSmoker | NpcKind::HeavySmoker | NpcKind::ShopKeeper => {
                 NpcStats::named(self.display_name())

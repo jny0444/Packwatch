@@ -41,9 +41,30 @@ pub fn spawn_page(mut commands: Commands) {
 pub fn close_page(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut open: ResMut<OpenInspection>,
-    mut page: Query<&mut Visibility, (With<InspectionPage>, Without<ShopPage>, Without<InventoryPage>)>,
-    mut shop: Query<&mut Visibility, (With<ShopPage>, Without<InspectionPage>, Without<InventoryPage>)>,
-    mut bag: Query<&mut Visibility, (With<InventoryPage>, Without<InspectionPage>, Without<ShopPage>)>,
+    mut page: Query<
+        &mut Visibility,
+        (
+            With<InspectionPage>,
+            Without<ShopPage>,
+            Without<InventoryPage>,
+        ),
+    >,
+    mut shop: Query<
+        &mut Visibility,
+        (
+            With<ShopPage>,
+            Without<InspectionPage>,
+            Without<InventoryPage>,
+        ),
+    >,
+    mut bag: Query<
+        &mut Visibility,
+        (
+            With<InventoryPage>,
+            Without<InspectionPage>,
+            Without<ShopPage>,
+        ),
+    >,
     mut cursor_options: Single<&mut CursorOptions>,
 ) {
     if !open.is_open() {

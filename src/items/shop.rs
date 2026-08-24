@@ -1,7 +1,9 @@
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::{
     asset::RenderAssetUsages,
-    camera::{visibility::RenderLayers, RenderTarget},
-    input::mouse::{MouseScrollUnit, MouseWheel},
+    camera::{RenderTarget, visibility::RenderLayers},
+    input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
     prelude::*,
     render::render_resource::{TextureDimension, TextureFormat, TextureUsages},
     ui::widget::ViewportNode,
@@ -9,10 +11,10 @@ use bevy::{
 
 use crate::{
     items::{
+        Inventory, ItemKind,
         hud::WalletHud,
         types::{BeerTypes, CigTypes, GumTypes},
         wallet::Wallet,
-        Inventory, ItemKind,
     },
     screens::GameState,
     templates::FixGltfAlpha,
@@ -26,6 +28,8 @@ const FLASH_SECS: f32 = 0.45;
 const ROW_GAP: f32 = 8.0;
 const PREVIEW_LAYER: usize = 1;
 const PREVIEW_POS: Vec3 = Vec3::new(0.0, -200.0, 0.0);
+const PREVIEW_SPIN_SPEED: f32 = 0.7;
+const PREVIEW_DRAG_SPEED: f32 = 0.008;
 
 #[derive(Clone, Copy)]
 pub struct ShopListing {
@@ -98,7 +102,13 @@ pub(crate) struct PurchasePulse {
 pub(crate) struct ShopPreviewCamera;
 
 #[derive(Component)]
-pub(crate) struct ShopPreviewStage;
+pub(crate) struct ShopPreviewStage {
+    /// Cleared once the player grabs the model, so their angle survives.
+    auto_spin: bool,
+}
+
+#[derive(Component)]
+pub(crate) struct ShopPreviewViewport;
 
 #[derive(Component)]
 pub(crate) struct ShopPreviewModel(ItemKind);
@@ -136,20 +146,28 @@ impl ShopUi {
 
     fn clamp_qty(&mut self, inventory: &Inventory) {
         let max = self.max_qty(inventory);
-        self.qty = if max == 0 {
-            1
-        } else {
-            self.qty.clamp(1, max)
-        };
+        self.qty = if max == 0 { 1 } else { self.qty.clamp(1, max) };
     }
 }
 
-fn preview_transform(kind: ItemKind) -> (f32, Vec3) {
-    match kind {
-        ItemKind::Cig(_) => (10.5, Vec3::new(1.14, -6.22, -1.22)),
-        ItemKind::Beer(_) => (0.39, Vec3::new(0.0, -0.06, 0.0)),
-        ItemKind::Gum(_) => (0.36, Vec3::ZERO),
-        ItemKind::Lighter => (2.8, Vec3::ZERO),
+fn preview_transform(kind: ItemKind) -> Transform {
+    // `center` cancels out a glTF origin that sits away from the mesh, so it has
+    // to be rotated alongside the model to keep the mesh on the stage pivot.
+    let (scale, center, rotation) = match kind {
+        ItemKind::Cig(_) => (
+            10.5,
+            Vec3::new(1.14, -6.22, -1.22),
+            Quat::from_rotation_x(FRAC_PI_2),
+        ),
+        ItemKind::Beer(_) => (0.39, Vec3::new(0.0, -0.06, 0.0), Quat::IDENTITY),
+        ItemKind::Gum(_) => (0.36, Vec3::ZERO, Quat::IDENTITY),
+        ItemKind::Lighter => (2.8, Vec3::ZERO, Quat::IDENTITY),
+    };
+
+    Transform {
+        translation: rotation * center,
+        rotation,
+        scale: Vec3::splat(scale),
     }
 }
 
@@ -204,7 +222,7 @@ fn spawn_preview_world(
 
     commands
         .spawn((
-            ShopPreviewStage,
+            ShopPreviewStage { auto_spin: true },
             DespawnOnExit(GameState::Playing),
             Transform::from_translation(PREVIEW_POS),
             Visibility::Visible,
@@ -229,9 +247,7 @@ fn spawn_preview_world(
 }
 
 fn preview_root(asset_server: &AssetServer, kind: ItemKind) -> WorldAssetRoot {
-    WorldAssetRoot(
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset(kind.resolved_model())),
-    )
+    WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(kind.resolved_model())))
 }
 
 fn spawn_preview_model(
@@ -240,16 +256,11 @@ fn spawn_preview_model(
     layers: RenderLayers,
     kind: ItemKind,
 ) {
-    let (scale, offset) = preview_transform(kind);
     stage.spawn((
         ShopPreviewModel(kind),
         FixGltfAlpha,
         preview_root(asset_server, kind),
-        Transform {
-            translation: offset,
-            scale: Vec3::splat(scale),
-            ..default()
-        },
+        preview_transform(kind),
         Visibility::Inherited,
         layers,
     ));
@@ -367,6 +378,8 @@ fn spawn_detail_pane(panel: &mut ChildSpawnerCommands, camera: Entity) {
                 },
                 BorderColor::all(Color::srgb(0.22, 0.22, 0.24)),
                 ViewportNode::new(camera),
+                ShopPreviewViewport,
+                Interaction::default(),
             ));
             right.spawn((
                 ShopField::Name,
@@ -545,16 +558,21 @@ pub(crate) fn shop_interact(
         }
     }
 
-    let buy_clicked = buy_buttons
-        .iter()
-        .any(|(entity, interaction)| {
-            if *interaction == Interaction::Pressed {
-                try_buy(&mut ui, &mut wallet, &mut inventory, &mut flash, &mut commands, entity);
-                true
-            } else {
-                false
-            }
-        });
+    let buy_clicked = buy_buttons.iter().any(|(entity, interaction)| {
+        if *interaction == Interaction::Pressed {
+            try_buy(
+                &mut ui,
+                &mut wallet,
+                &mut inventory,
+                &mut flash,
+                &mut commands,
+                entity,
+            );
+            true
+        } else {
+            false
+        }
+    });
 
     if !buy_clicked
         && (keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::NumpadEnter))
@@ -676,6 +694,7 @@ pub(crate) fn sync_shop_preview(
     asset_server: Res<AssetServer>,
     mut cameras: Query<&mut Camera, With<ShopPreviewCamera>>,
     mut preview: Query<(&mut ShopPreviewModel, &mut Transform, &mut WorldAssetRoot)>,
+    mut stages: Query<(&mut Transform, &mut ShopPreviewStage), Without<ShopPreviewModel>>,
 ) {
     let open = shop_visible(&shop);
     if let Ok(mut camera) = cameras.single_mut() {
@@ -694,12 +713,13 @@ pub(crate) fn sync_shop_preview(
     }
 
     model.0 = kind;
-    let (scale, offset) = preview_transform(kind);
-    *transform = Transform {
-        translation: offset,
-        scale: Vec3::splat(scale),
-        ..default()
-    };
+    *transform = preview_transform(kind);
+
+    // A new item shouldn't inherit the angle the player dragged the last one to.
+    for (mut stage_transform, mut stage) in &mut stages {
+        stage_transform.rotation = Quat::IDENTITY;
+        stage.auto_spin = true;
+    }
 
     let next = preview_root(&asset_server, kind);
     if root.0 != next.0 {
@@ -707,16 +727,51 @@ pub(crate) fn sync_shop_preview(
     }
 }
 
+/// Left-drag anywhere over the preview to spin the model by hand. Bevy keeps a
+/// node `Pressed` after the cursor leaves it, so the grab survives fast drags.
+pub(crate) fn drag_preview(
+    shop: Query<&Visibility, With<ShopPage>>,
+    viewport: Query<&Interaction, With<ShopPreviewViewport>>,
+    mut motion: MessageReader<MouseMotion>,
+    mut stages: Query<(&mut Transform, &mut ShopPreviewStage)>,
+) {
+    let dragging = shop_visible(&shop)
+        && viewport
+            .single()
+            .is_ok_and(|interaction| *interaction == Interaction::Pressed);
+
+    if !dragging {
+        motion.clear();
+        return;
+    }
+
+    let delta: Vec2 = motion.read().map(|motion| motion.delta).sum();
+
+    for (mut transform, mut stage) in &mut stages {
+        if stage.auto_spin {
+            stage.auto_spin = false;
+        }
+        if delta == Vec2::ZERO {
+            continue;
+        }
+        transform.rotate_y(delta.x * PREVIEW_DRAG_SPEED);
+        transform.rotate_x(delta.y * PREVIEW_DRAG_SPEED);
+    }
+}
+
 pub(crate) fn rotate_preview(
     shop: Query<&Visibility, With<ShopPage>>,
     time: Res<Time>,
-    mut stages: Query<&mut Transform, With<ShopPreviewStage>>,
+    mut stages: Query<(&mut Transform, &ShopPreviewStage)>,
 ) {
     if !shop_visible(&shop) {
         return;
     }
-    for mut transform in &mut stages {
-        transform.rotate_y(time.delta_secs() * 0.7);
+    for (mut transform, stage) in &mut stages {
+        if !stage.auto_spin {
+            continue;
+        }
+        transform.rotate_y(time.delta_secs() * PREVIEW_SPIN_SPEED);
     }
 }
 
@@ -751,7 +806,12 @@ pub(crate) fn animate_purchase(
     mut flash: ResMut<SpendFlash>,
     mut commands: Commands,
     mut buttons: Query<
-        (Entity, &mut PurchasePulse, &mut BackgroundColor, &mut UiTransform),
+        (
+            Entity,
+            &mut PurchasePulse,
+            &mut BackgroundColor,
+            &mut UiTransform,
+        ),
         With<ShopBuyConfirm>,
     >,
     mut confirm: Query<(&mut Text, &mut TextColor), With<ShopConfirm>>,
